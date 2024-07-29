@@ -1,0 +1,433 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.4" author="PygubuDesigner 0.39.3">
+  <project>
+    <settings>
+      <setting id="name">ezShareCPAP</setting>
+      <setting id="description">-</setting>
+      <setting id="module_name">main</setting>
+      <setting id="template">application</setting>
+      <setting id="main_widget">mainwindow</setting>
+      <setting id="main_classname">ezShareGui</setting>
+      <setting id="main_menu" />
+      <setting id="output_dir" />
+      <setting id="output_dir2" />
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="generate_code_onsave">True</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
+    <customwidgets />
+  </project>
+  <object class="tk.Toplevel" id="mainwindow">
+    <property name="container">false</property>
+    <property name="cursor">boat</property>
+    <property name="minsize">377|495</property>
+    <property name="title" translatable="yes">ezShareCPAP</property>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="cursor">arrow</property>
+        <layout manager="pack">
+          <property name="anchor">center</property>
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Labelframe" id="labelframe2">
+            <property name="labelanchor">nw</property>
+            <property name="takefocus">true</property>
+            <property name="text" translatable="yes">Local Directory:</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="pygubu.widgets.PathChooserInput" id="path" named="True">
+                <property name="mustexist">false</property>
+                <property name="state">normal</property>
+                <property name="textvariable">string:pathfield</property>
+                <property name="title" translatable="yes">Local Directory</property>
+                <property name="type">directory</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Labelframe" id="url_" named="True">
+            <property name="height">200</property>
+            <property name="text" translatable="yes">URL:</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Entry" id="urlEntry">
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Labelframe" id="wifi_frame" named="True">
+            <property name="height">200</property>
+            <property name="labelanchor">nw</property>
+            <property name="takefocus">true</property>
+            <property name="text" translatable="yes">ez Share WiFi:</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Frame" id="frame10">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Label" id="label2">
+                    <property name="text" translatable="yes">SSID:</property>
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="expand">false</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Entry" id="ssidEntry">
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="ezShareConfigBtn">
+                    <property name="text" translatable="yes">Configure</property>
+                    <bind sequence="&lt;ButtonRelease&gt;" handler="ez_share_config" add="" />
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="expand">false</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">top</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Frame" id="frame11">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Label" id="label1">
+                    <property name="text" translatable="yes">PSK: </property>
+                    <layout manager="pack">
+                      <property name="anchor">w</property>
+                      <property name="expand">false</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Entry" id="pskEntry">
+                    <property name="show">*</property>
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame18">
+            <property name="height">200</property>
+            <property name="relief">flat</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Frame" id="frame2">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">false</property>
+                  <property name="fill">both</property>
+                  <property name="side">left</property>
+                </layout>
+                <child>
+                  <object class="ttk.Labelframe" id="labelframe1">
+                    <property name="height">200</property>
+                    <property name="text" translatable="yes">On Completion:</property>
+                    <property name="width">200</property>
+                    <layout manager="pack">
+                      <property name="expand">false</property>
+                      <property name="fill">y</property>
+                      <property name="padx">10</property>
+                      <property name="side">left</property>
+                    </layout>
+                    <child>
+                      <object class="ttk.Checkbutton" id="importOscarCheckbox">
+                        <property name="state">normal</property>
+                        <property name="text" translatable="yes">Import with OSCAR</property>
+                        <layout manager="pack">
+                          <property name="anchor">nw</property>
+                          <property name="expand">true</property>
+                          <property name="fill">y</property>
+                          <property name="padx">10</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttkwidgets.LinkLabel" id="downloadOscarLink" named="True">
+                        <property name="anchor">se</property>
+                        <property name="compound">top</property>
+                        <property name="link">https://www.sleepfiles.com/OSCAR/</property>
+                        <property name="state">normal</property>
+                        <property name="style">light.TLabel</property>
+                        <property name="takefocus">true</property>
+                        <property name="text" translatable="yes">Download OSCAR</property>
+                        <layout manager="pack">
+                          <property name="anchor">n</property>
+                          <property name="expand">false</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Checkbutton" id="quitCheckbox">
+                        <property name="state">normal</property>
+                        <property name="text" translatable="yes">Quit</property>
+                        <layout manager="pack">
+                          <property name="anchor">nw</property>
+                          <property name="expand">true</property>
+                          <property name="fill">y</property>
+                          <property name="padx">10</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Frame" id="frame4">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="side">left</property>
+                </layout>
+                <child>
+                  <object class="ttk.Labelframe" id="labelframe3">
+                    <property name="height">200</property>
+                    <property name="text" translatable="yes">Settings:	</property>
+                    <property name="width">200</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">10</property>
+                      <property name="side">left</property>
+                    </layout>
+                    <child>
+                      <object class="ttk.Button" id="saveBtn">
+                        <property name="text" translatable="yes">Save</property>
+                        <bind sequence="&lt;ButtonRelease&gt;" handler="save_config" add="" />
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">both</property>
+                          <property name="padx">10</property>
+                          <property name="pady">5</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Button" id="defaultBtn">
+                        <property name="text" translatable="yes">Defaults</property>
+                        <bind sequence="&lt;ButtonRelease&gt;" handler="restore_defaults" add="" />
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">both</property>
+                          <property name="padx">10</property>
+                          <property name="pady">5</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame13">
+            <property name="height">200</property>
+            <property name="relief">flat</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Button" id="startBtn">
+                <property name="default">active</property>
+                <property name="text" translatable="yes">Start</property>
+                <bind sequence="&lt;ButtonRelease&gt;" handler="start_process" add="" />
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="ipadx">45</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Frame" id="frame14">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Button" id="button9">
+                    <property name="text" translatable="yes">Cancel</property>
+                    <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_process" add="" />
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="quitBtn" named="True">
+                    <property name="text" translatable="yes">Quit</property>
+                    <bind sequence="&lt;ButtonRelease&gt;" handler="quit_application" add="" />
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">right</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="status_frame" named="True">
+            <property name="height">200</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Progressbar" id="progressBar">
+                <layout manager="pack">
+                  <property name="anchor">center</property>
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">20</property>
+                  <property name="pady">5</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="statusLabel">
+                <property name="text" translatable="yes">Ready.</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">20</property>
+                  <property name="pady">10</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
