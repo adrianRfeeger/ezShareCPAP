@@ -6,13 +6,13 @@ import queue
 import requests
 import subprocess
 import time
+import webbrowser
 from tkinter import messagebox, BooleanVar
 from pygubu import Builder
 from ezshare import ezShare
 from worker import EzShareWorker
 from wifi import connect_to_wifi, wifi_connected
-from utils import check_oscar_installed, ensure_disk_access
-
+from utils import check_oscar_installed, ensure_disk_access, resource_path
 
 class ezShareGuiUI:
     def __init__(self, master):
@@ -28,8 +28,9 @@ class ezShareGuiUI:
         self.builder = Builder()
         self.builder.add_resource_path(pathlib.Path(__file__).parent)
 
-        # Load the UI file
-        self.builder.add_from_file('ezshare.ui')
+        # Load the UI file using resource_path
+        ui_file_path = resource_path('ezshare.ui')
+        self.builder.add_from_file(ui_file_path)
 
         # Create the main window
         self.mainwindow = self.builder.get_object('mainwindow', master)
@@ -43,8 +44,9 @@ class ezShareGuiUI:
         self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
         self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
 
-        # Hide the downloadOscarLink initially
-        self.builder.get_object('downloadOscarLink').pack_forget()
+        # Find the downloadOscarLink label and bind it
+        self.download_label = self.builder.get_object('downloadOscarLink')
+        self.download_label.bind("<Button-1>", self.open_oscar_download_page)
 
         # Initialize the configuration and UI
         self.init_config()
@@ -112,6 +114,7 @@ class ezShareGuiUI:
         self.builder.get_object('ssidEntry').insert(0, self.config['WiFi'].get('ssid', 'ez Share'))
         self.builder.get_object('pskEntry').insert(0, self.config['WiFi'].get('psk', '88888888'))
         self.quit_var.set(self.config['Settings'].getboolean('quit_after_completion', False))
+        self.import_oscar_var.set(self.config['Settings'].getboolean('import_oscar', False))
         self.apply_window_geometry()
 
     def save_config(self, event=None):
@@ -121,7 +124,7 @@ class ezShareGuiUI:
             'url': self.builder.get_object('urlEntry').get(),
             'accessibility_checked': self.config['Settings'].get('accessibility_checked', 'False'),
             'accessibility_prompt_disabled': self.config['Settings'].get('accessibility_prompt_disabled', 'False'),
-            'import_oscar': self.config['Settings'].get('import_oscar', 'False'),
+            'import_oscar': str(self.import_oscar_var.get()),
             'quit_after_completion': str(self.quit_var.get())
         }
         self.config['WiFi'] = {
@@ -238,6 +241,23 @@ class ezShareGuiUI:
         else:
             self.update_status('Ready.', 'info')
 
+        if self.import_oscar_var.get():
+            self.import_cpap_data_with_oscar()
+
+    def import_cpap_data_with_oscar(self):
+        script = '''
+        tell application "OSCAR"
+            activate
+            delay 2
+            tell application "System Events"
+                tell process "OSCAR"
+                    click menu item "Import CPAP Card Data" of menu "File" of menu bar 1
+                end tell
+            end tell
+        end tell
+        '''
+        subprocess.run(["osascript", "-e", script])
+
     def cancel_process(self, event=None):
         if self.worker and self.worker.is_alive():
             self.worker.stop()
@@ -301,7 +321,6 @@ class ezShareGuiUI:
         self.close_event_handler()
         event.accept()
 
-    
     def restore_defaults(self, event=None):
         default_path = '~/Documents/CPAP_Data/SD_card'
         default_url = 'http://192.168.4.1/dir?dir=A:'
@@ -356,7 +375,7 @@ class ezShareGuiUI:
         if oscar_installed:
             self.builder.get_object('downloadOscarLink').pack_forget()
         else:
-            self.builder.get_object('downloadOscarLink').pack()
+            self.builder.get_object('downloadOscarLink').pack(fill='both', expand=True, padx=10, pady=5, side='top')
 
     def disable_ui_elements(self):
         self.builder.get_object('path').config(state=tk.DISABLED)
@@ -380,6 +399,8 @@ class ezShareGuiUI:
             self.worker.join()
         self.mainwindow.quit()
 
+    def open_oscar_download_page(self, event=None):
+        webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
 if __name__ == '__main__':
     root = tk.Tk()

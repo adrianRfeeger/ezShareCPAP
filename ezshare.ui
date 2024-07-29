@@ -241,14 +241,12 @@
                       </object>
                     </child>
                     <child>
-                      <object class="ttkwidgets.LinkLabel" id="downloadOscarLink" named="True">
-                        <property name="anchor">se</property>
-                        <property name="compound">top</property>
-                        <property name="link">https://www.sleepfiles.com/OSCAR/</property>
-                        <property name="state">normal</property>
-                        <property name="style">light.TLabel</property>
-                        <property name="takefocus">true</property>
+                      <object class="ttk.Label" id="downloadOscarLink" named="True">
+                        <property name="anchor">ne</property>
+                        <property name="font">{arial} 12 {underline}</property>
+                        <property name="foreground">#0660dd</property>
                         <property name="text" translatable="yes">Download OSCAR</property>
+                        <bind sequence="&lt;ButtonRelease&gt;" handler="open_oscar_download_page" add="" />
                         <layout manager="pack">
                           <property name="anchor">n</property>
                           <property name="expand">false</property>
