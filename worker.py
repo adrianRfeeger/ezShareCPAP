@@ -1,5 +1,4 @@
 import threading
-import queue
 from wifi import connect_to_wifi, disconnect_from_wifi
 
 class EzShareWorker(threading.Thread):
@@ -31,4 +30,3 @@ class EzShareWorker(threading.Thread):
         self._is_running = False
         self.queue.put(('stop',))
         disconnect_from_wifi(self.ezshare)
-        self.ezshare.disconnect_from_wifi()

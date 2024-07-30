@@ -1,7 +1,6 @@
 import os
 import pathlib
 import configparser
-import tkinter as tk
 
 
 def init_config(config_file):
@@ -51,6 +50,7 @@ def init_config(config_file):
                 'y': '100'
             }
     return config
+
 
 def save_config(config, config_file):
     with open(config_file, 'w') as configfile:

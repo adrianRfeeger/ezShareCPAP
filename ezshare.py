@@ -3,10 +3,11 @@ import logging
 import requests
 import time
 import urllib.parse
-from urllib3.util import retry
-from requests import adapters
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 from wifi import connect_to_wifi, disconnect_from_wifi, wifi_connected
 from file_ops import recursive_traversal, list_dir
+
 
 class ezShare:
     def __init__(self):
@@ -47,9 +48,9 @@ class ezShare:
         self.psk = psk
         self.ignore = ['.', '..', 'back to photo'] + ignore
         self.retries = retries
-        self.retry = retry.Retry(total=retries, backoff_factor=0.25)
+        self.retry = Retry(total=retries, backoff_factor=0.25)
         self.connection_delay = connection_delay
-        self.session.mount('http://', adapters.HTTPAdapter(max_retries=self.retry))
+        self.session.mount('http://', HTTPAdapter(max_retries=self.retry))
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
@@ -98,6 +99,12 @@ class ezShare:
             self.update_status('Establishing files for download...')
             self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
             self.update_status(f'Total files to sync: {self.total_files}')
+            
+            # Check for zero files to sync
+            if self.total_files == 0:
+                self.update_status('No files to sync. Process completed.')
+                return
+
             self.update_status('Starting file transfer...')
             self.processed_files = recursive_traversal(self, self.url, self.path, self.total_files, self.processed_files)
             self.update_status('File transfer completed.')

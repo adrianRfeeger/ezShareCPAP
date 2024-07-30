@@ -2,7 +2,6 @@
 import pathlib
 import tkinter as tk
 import tkinter.ttk as ttk
-import configparser
 import queue
 import requests
 import subprocess
@@ -12,18 +11,20 @@ import pygubu
 from tkinter import messagebox, BooleanVar
 from ezshare import ezShare
 from worker import EzShareWorker
-from wifi import connect_to_wifi, wifi_connected
+from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi
 from utils import check_oscar_installed, ensure_disk_access, resource_path
 from project_styles import setup_ttk_styles
+from config import init_config, save_config
 
 PROJECT_PATH = pathlib.Path(__file__).parent
 PROJECT_UI = PROJECT_PATH / "ezshare.ui"
 RESOURCE_PATHS = [PROJECT_PATH]
 
+
 class ezShareCPAPUI:
     def __init__(self, master=None, on_first_object_cb=None):
         self.config_file = pathlib.Path.home() / 'ezshare_config.ini'
-        self.config = configparser.ConfigParser()
+        self.config = init_config(self.config_file)
         self.ezshare = ezShare()
         self.worker = None
         self.worker_queue = queue.Queue()
@@ -55,7 +56,6 @@ class ezShareCPAPUI:
         self.download_label.bind("<Button-1>", self.open_oscar_download_page)
 
         # Initialize the configuration and UI
-        self.init_config()
         self.load_config()
         self.update_checkboxes()
         ensure_disk_access(self.config['Settings']['path'], self)
@@ -65,52 +65,6 @@ class ezShareCPAPUI:
 
     def run(self):
         self.mainwindow.mainloop()
-
-    def init_config(self):
-        if not self.config_file.exists():
-            self.config['Settings'] = {
-                'path': '~/Documents/CPAP_Data/SD_card',
-                'url': 'http://192.168.4.1/dir?dir=A:',
-                'accessibility_checked': 'False',
-                'accessibility_prompt_disabled': 'False',
-                'import_oscar': 'False',
-                'quit_after_completion': 'False'
-            }
-            self.config['WiFi'] = {
-                'ssid': 'ez Share',
-                'psk': '88888888'
-            }
-            self.config['Window'] = {
-                'width': '800',
-                'height': '600',
-                'x': '100',
-                'y': '100'
-            }
-            with open(self.config_file, 'w') as configfile:
-                self.config.write(configfile)
-        else:
-            self.config.read(self.config_file)
-            if 'Settings' not in self.config:
-                self.config['Settings'] = {
-                    'path': '~/Documents/CPAP_Data/SD_card',
-                    'url': 'http://192.168.4.1/dir?dir=A:',
-                    'accessibility_checked': 'False',
-                    'accessibility_prompt_disabled': 'False',
-                    'import_oscar': 'False',
-                    'quit_after_completion': 'False'
-                }
-            if 'WiFi' not in self.config:
-                self.config['WiFi'] = {
-                    'ssid': 'ez Share',
-                    'psk': '88888888'
-                }
-            if 'Window' not in self.config:
-                self.config['Window'] = {
-                    'width': '800',
-                    'height': '600',
-                    'x': '100',
-                    'y': '100'
-                }
 
     def load_config(self):
         self.config.read(self.config_file)
@@ -138,8 +92,7 @@ class ezShareCPAPUI:
             'psk': self.builder.get_object('pskEntry').get()
         }
         self.save_window_geometry()
-        with open(self.config_file, 'w') as configfile:
-            self.config.write(configfile)
+        save_config(self.config, self.config_file)
         self.update_status('Settings have been saved.', 'info')
 
     def save_window_geometry(self):
@@ -407,6 +360,7 @@ class ezShareCPAPUI:
 
     def open_oscar_download_page(self, event=None):
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
+
 
 if __name__ == "__main__":
     app = ezShareCPAPUI()
