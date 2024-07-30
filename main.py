@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import pathlib
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -7,15 +8,20 @@ import requests
 import subprocess
 import time
 import webbrowser
+import pygubu
 from tkinter import messagebox, BooleanVar
-from pygubu import Builder
 from ezshare import ezShare
 from worker import EzShareWorker
 from wifi import connect_to_wifi, wifi_connected
 from utils import check_oscar_installed, ensure_disk_access, resource_path
+from project_styles import setup_ttk_styles
 
-class ezShareGuiUI:
-    def __init__(self, master):
+PROJECT_PATH = pathlib.Path(__file__).parent
+PROJECT_UI = PROJECT_PATH / "ezshare.ui"
+RESOURCE_PATHS = [PROJECT_PATH]
+
+class ezShareCPAPUI:
+    def __init__(self, master=None, on_first_object_cb=None):
         self.config_file = pathlib.Path.home() / 'ezshare_config.ini'
         self.config = configparser.ConfigParser()
         self.ezshare = ezShare()
@@ -25,17 +31,17 @@ class ezShareGuiUI:
         self.status_timer = None
 
         # Initialize the pygubu builder
-        self.builder = Builder()
-        self.builder.add_resource_path(pathlib.Path(__file__).parent)
-
-        # Load the UI file using resource_path
-        ui_file_path = resource_path('ezshare.ui')
-        self.builder.add_from_file(ui_file_path)
-
+        self.builder = pygubu.Builder(on_first_object=on_first_object_cb)
+        self.builder.add_resource_paths(RESOURCE_PATHS)
+        self.builder.add_from_file(PROJECT_UI)
+        
         # Create the main window
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
-
+        
+        # Apply custom styles
+        setup_ttk_styles(self.mainwindow)
+        
         # Initialize BooleanVars for checkbuttons
         self.quit_var = BooleanVar()
         self.import_oscar_var = BooleanVar()
@@ -402,9 +408,6 @@ class ezShareGuiUI:
     def open_oscar_download_page(self, event=None):
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
-if __name__ == '__main__':
-    root = tk.Tk()
-    app = ezShareGuiUI(master=root)
-    root.withdraw()  # Hide the root window
+if __name__ == "__main__":
+    app = ezShareCPAPUI()
     app.run()
-    root.destroy()  # Destroy the root window after the app is closed

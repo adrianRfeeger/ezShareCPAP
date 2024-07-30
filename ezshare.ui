@@ -7,28 +7,38 @@
       <setting id="module_name">main</setting>
       <setting id="template">application</setting>
       <setting id="main_widget">mainwindow</setting>
-      <setting id="main_classname">ezShareGui</setting>
+      <setting id="main_classname">ezShareCPAP</setting>
       <setting id="main_menu" />
-      <setting id="output_dir" />
+      <setting id="output_dir">.</setting>
       <setting id="output_dir2" />
       <setting id="import_tkvariables">False</setting>
-      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_ttk_styledefinition_file">True</setting>
       <setting id="use_i18n">False</setting>
       <setting id="all_ids_attributes">False</setting>
-      <setting id="generate_code_onsave">True</setting>
+      <setting id="generate_code_onsave">False</setting>
       <setting id="use_window_centering_code">False</setting>
-      <setting id="ttk_style_definition_file" />
+      <setting id="ttk_style_definition_file">project_styles.py</setting>
     </settings>
     <customwidgets />
   </project>
   <object class="tk.Toplevel" id="mainwindow">
     <property name="container">false</property>
     <property name="cursor">boat</property>
-    <property name="minsize">377|495</property>
+    <property name="height">500</property>
+    <property name="iconbitmap">icon.png</property>
+    <property name="iconphoto">icon.png</property>
+    <property name="maxsize">400|550</property>
+    <property name="minsize">400|500</property>
+    <property name="relief">raised</property>
+    <property name="resizable">none</property>
+    <property name="takefocus">true</property>
     <property name="title" translatable="yes">ezShareCPAP</property>
+    <property name="width">400</property>
     <child>
       <object class="ttk.Frame" id="frame1">
         <property name="cursor">arrow</property>
+        <property name="height">500</property>
+        <property name="width">400</property>
         <layout manager="pack">
           <property name="anchor">center</property>
           <property name="expand">true</property>
@@ -222,6 +232,7 @@
                     <property name="text" translatable="yes">On Completion:</property>
                     <property name="width">200</property>
                     <layout manager="pack">
+                      <property name="anchor">w</property>
                       <property name="expand">false</property>
                       <property name="fill">y</property>
                       <property name="padx">10</property>
@@ -230,6 +241,7 @@
                     <child>
                       <object class="ttk.Checkbutton" id="importOscarCheckbox">
                         <property name="state">normal</property>
+                        <property name="style">TCheckbutton</property>
                         <property name="text" translatable="yes">Import with OSCAR</property>
                         <layout manager="pack">
                           <property name="anchor">nw</property>
@@ -257,6 +269,7 @@
                     <child>
                       <object class="ttk.Checkbutton" id="quitCheckbox">
                         <property name="state">normal</property>
+                        <property name="style">TCheckbutton</property>
                         <property name="text" translatable="yes">Quit</property>
                         <layout manager="pack">
                           <property name="anchor">nw</property>
@@ -282,14 +295,13 @@
                 </layout>
                 <child>
                   <object class="ttk.Labelframe" id="labelframe3">
-                    <property name="height">200</property>
                     <property name="text" translatable="yes">Settings:	</property>
                     <property name="width">200</property>
                     <layout manager="pack">
                       <property name="expand">true</property>
                       <property name="fill">both</property>
                       <property name="padx">10</property>
-                      <property name="side">left</property>
+                      <property name="side">right</property>
                     </layout>
                     <child>
                       <object class="ttk.Button" id="saveBtn">
@@ -338,6 +350,8 @@
             <child>
               <object class="ttk.Button" id="startBtn">
                 <property name="default">active</property>
+                <property name="style">primary.TButton</property>
+                <property name="takefocus">true</property>
                 <property name="text" translatable="yes">Start</property>
                 <bind sequence="&lt;ButtonRelease&gt;" handler="start_process" add="" />
                 <layout manager="pack">
