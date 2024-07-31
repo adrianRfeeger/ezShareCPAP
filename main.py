@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import pathlib
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -18,7 +17,6 @@ from config import init_config, save_config
 PROJECT_PATH = pathlib.Path(__file__).parent
 PROJECT_UI = PROJECT_PATH / "ezshare.ui"
 RESOURCE_PATHS = [PROJECT_PATH]
-
 
 class ezShareCPAPUI:
     def __init__(self, master=None, on_first_object_cb=None):
@@ -177,7 +175,7 @@ class ezShareCPAPUI:
             if message_type == 'error':
                 self.builder.get_object('statusLabel')['foreground'] = 'red'
             else:
-                self.builder.get_object('statusLabel')['foreground'] = ''
+                self.builder.get_object('statusLabel').config(foreground='')
             if message_type == 'info' and message != 'Ready.':
                 self.status_timer = self.mainwindow.after(5000, self.reset_status)
 

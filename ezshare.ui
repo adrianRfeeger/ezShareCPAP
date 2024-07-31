@@ -413,7 +413,7 @@
                   <property name="expand">true</property>
                   <property name="fill">both</property>
                   <property name="padx">20</property>
-                  <property name="pady">5</property>
+                  <property name="pady">0</property>
                   <property name="side">top</property>
                 </layout>
               </object>
@@ -423,7 +423,7 @@
                 <property name="text" translatable="yes">Ready.</property>
                 <layout manager="pack">
                   <property name="padx">20</property>
-                  <property name="pady">5</property>
+                  <property name="pady">10</property>
                   <property name="side">left</property>
                 </layout>
               </object>
@@ -445,24 +445,6 @@
                 <property name="font">systemApplicationFont</property>
                 <property name="label" translatable="yes">Settings</property>
                 <child>
-                  <object class="tk.Menuitem.Submenu" id="oncompletion" named="True">
-                    <property name="label" translatable="yes">On Completion</property>
-                    <child>
-                      <object class="tk.Menuitem.Checkbutton" id="checkbutton2">
-                        <property name="label" translatable="yes">Import with OSCAR</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="tk.Menuitem.Checkbutton" id="checkbutton3">
-                        <property name="label" translatable="yes">Quit</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="tk.Menuitem.Separator" id="separator1" />
-                </child>
-                <child>
                   <object class="tk.Menuitem.Command" id="defaults" named="True">
                     <property name="label" translatable="yes">Restore Defaults</property>
                   </object>
@@ -478,7 +460,7 @@
               <object class="tk.Menuitem.Submenu" id="tools" named="True">
                 <property name="label" translatable="yes">Tools</property>
                 <child>
-                  <object class="tk.Menuitem.Command" id="ezsharewifi" named="True">
+                  <object class="tk.Menuitem.Command" id="configezwifi" named="True">
                     <property name="label" translatable="yes">Configure ez Share WiFi</property>
                   </object>
                 </child>
