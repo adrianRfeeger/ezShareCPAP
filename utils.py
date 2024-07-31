@@ -43,6 +43,7 @@ def check_oscar_installed():
     return oscar_installed.returncode == 0
 
 def request_accessibility_access(parent):
-    QMessageBox.information(parent, 'Accessibility Access',
-                            'Please enable accessibility access for this application in System Preferences.')
+    messagebox.showinfo('Accessibility Access',
+                        'Please enable accessibility access for this application in System Preferences.',
+                        parent=parent)
     subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
