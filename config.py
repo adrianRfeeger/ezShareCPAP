@@ -9,8 +9,6 @@ def init_config(config_file):
         config['Settings'] = {
             'path': '~/Documents/CPAP_Data/SD_card',
             'url': 'http://192.168.4.1/dir?dir=A:',
-            'accessibility_checked': 'False',
-            'accessibility_prompt_disabled': 'False',
             'import_oscar': 'False',
             'quit_after_completion': 'False'
         }
@@ -32,8 +30,6 @@ def init_config(config_file):
             config['Settings'] = {
                 'path': '~/Documents/CPAP_Data/SD_card',
                 'url': 'http://192.168.4.1/dir?dir=A:',
-                'accessibility_checked': 'False',
-                'accessibility_prompt_disabled': 'False',
                 'import_oscar': 'False',
                 'quit_after_completion': 'False'
             }

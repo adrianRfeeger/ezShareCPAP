@@ -22,16 +22,11 @@
     <customwidgets />
   </project>
   <object class="tk.Toplevel" id="mainwindow">
-    <property name="container">false</property>
-    <property name="cursor">boat</property>
-    <property name="height">500</property>
-    <property name="iconbitmap">icon.png</property>
-    <property name="iconphoto">icon.png</property>
+    <property name="cursor">arrow</property>
+    <property name="height">550</property>
     <property name="maxsize">400|550</property>
     <property name="minsize">400|500</property>
-    <property name="relief">raised</property>
     <property name="resizable">none</property>
-    <property name="takefocus">true</property>
     <property name="title" translatable="yes">ezShareCPAP</property>
     <property name="width">400</property>
     <child>
@@ -214,7 +209,7 @@
             <property name="width">200</property>
             <layout manager="pack">
               <property name="expand">true</property>
-              <property name="fill">both</property>
+              <property name="fill">x</property>
               <property name="side">top</property>
             </layout>
             <child>
@@ -222,7 +217,6 @@
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
-                  <property name="expand">false</property>
                   <property name="fill">both</property>
                   <property name="side">left</property>
                 </layout>
@@ -234,7 +228,7 @@
                     <layout manager="pack">
                       <property name="anchor">w</property>
                       <property name="expand">false</property>
-                      <property name="fill">y</property>
+                      <property name="fill">both</property>
                       <property name="padx">10</property>
                       <property name="side">left</property>
                     </layout>
@@ -289,9 +283,8 @@
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
-                  <property name="expand">true</property>
                   <property name="fill">both</property>
-                  <property name="side">left</property>
+                  <property name="side">right</property>
                 </layout>
                 <child>
                   <object class="ttk.Labelframe" id="labelframe3">
@@ -426,15 +419,74 @@
               </object>
             </child>
             <child>
-              <object class="ttk.Label" id="statusLabel">
+              <object class="ttk.Label" id="statusLabel" named="True">
                 <property name="text" translatable="yes">Ready.</property>
                 <layout manager="pack">
-                  <property name="expand">true</property>
-                  <property name="fill">both</property>
                   <property name="padx">20</property>
-                  <property name="pady">10</property>
-                  <property name="side">top</property>
+                  <property name="pady">5</property>
+                  <property name="side">left</property>
                 </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="pygubu.builder.widgets.toplevelmenu" id="toplevelmenu1">
+        <child>
+          <object class="tk.Menu" id="menu2">
+            <property name="cursor">based_arrow_down</property>
+            <property name="font">TkTextFont</property>
+            <property name="takefocus">false</property>
+            <property name="title" translatable="yes">ezShareCPAP</property>
+            <child>
+              <object class="tk.Menuitem.Submenu" id="settings" named="True">
+                <property name="font">systemApplicationFont</property>
+                <property name="label" translatable="yes">Settings</property>
+                <child>
+                  <object class="tk.Menuitem.Submenu" id="oncompletion" named="True">
+                    <property name="label" translatable="yes">On Completion</property>
+                    <child>
+                      <object class="tk.Menuitem.Checkbutton" id="checkbutton2">
+                        <property name="label" translatable="yes">Import with OSCAR</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="tk.Menuitem.Checkbutton" id="checkbutton3">
+                        <property name="label" translatable="yes">Quit</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="tk.Menuitem.Separator" id="separator1" />
+                </child>
+                <child>
+                  <object class="tk.Menuitem.Command" id="defaults" named="True">
+                    <property name="label" translatable="yes">Restore Defaults</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="tk.Menuitem.Command" id="save" named="True">
+                    <property name="label" translatable="yes">Save</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Menuitem.Submenu" id="tools" named="True">
+                <property name="label" translatable="yes">Tools</property>
+                <child>
+                  <object class="tk.Menuitem.Command" id="ezsharewifi" named="True">
+                    <property name="label" translatable="yes">Configure ez Share WiFi</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="tk.Menuitem.Command" id="oscaraccess" named="True">
+                    <property name="label" translatable="yes">Check Access To OSCAR</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>

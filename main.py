@@ -12,8 +12,7 @@ from tkinter import messagebox, BooleanVar
 from ezshare import ezShare
 from worker import EzShareWorker
 from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi
-from utils import check_oscar_installed, ensure_disk_access, resource_path
-from project_styles import setup_ttk_styles
+from utils import check_oscar_installed, ensure_disk_access, resource_path, request_accessibility_access
 from config import init_config, save_config
 
 PROJECT_PATH = pathlib.Path(__file__).parent
@@ -23,7 +22,7 @@ RESOURCE_PATHS = [PROJECT_PATH]
 
 class ezShareCPAPUI:
     def __init__(self, master=None, on_first_object_cb=None):
-        self.config_file = pathlib.Path.home() / 'ezshare_config.ini'
+        self.config_file = pathlib.Path.home() / 'config.ini'
         self.config = init_config(self.config_file)
         self.ezshare = ezShare()
         self.worker = None
@@ -39,9 +38,6 @@ class ezShareCPAPUI:
         # Create the main window
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
-        
-        # Apply custom styles
-        setup_ttk_styles(self.mainwindow)
         
         # Initialize BooleanVars for checkbuttons
         self.quit_var = BooleanVar()
@@ -82,8 +78,6 @@ class ezShareCPAPUI:
         self.config['Settings'] = {
             'path': pathchooser.cget('path'),
             'url': self.builder.get_object('urlEntry').get(),
-            'accessibility_checked': self.config['Settings'].get('accessibility_checked', 'False'),
-            'accessibility_prompt_disabled': self.config['Settings'].get('accessibility_prompt_disabled', 'False'),
             'import_oscar': str(self.import_oscar_var.get()),
             'quit_after_completion': str(self.quit_var.get())
         }
@@ -183,7 +177,7 @@ class ezShareCPAPUI:
             if message_type == 'error':
                 self.builder.get_object('statusLabel')['foreground'] = 'red'
             else:
-                self.builder.get_object('statusLabel')['foreground'] = 'black'
+                self.builder.get_object('statusLabel')['foreground'] = ''
             if message_type == 'info' and message != 'Ready.':
                 self.status_timer = self.mainwindow.after(5000, self.reset_status)
 
@@ -289,8 +283,6 @@ class ezShareCPAPUI:
         self.config['Settings'] = {
             'path': default_path,
             'url': default_url,
-            'accessibility_checked': 'False',
-            'accessibility_prompt_disabled': 'False',
             'import_oscar': 'False',
             'quit_after_completion': 'False'
         }

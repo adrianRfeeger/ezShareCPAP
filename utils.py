@@ -10,14 +10,6 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-def is_dark_mode():
-    try:
-        result = subprocess.run(
-            ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
-            capture_output=True, text=True, check=True)
-        return 'Dark' in result.stdout
-    except subprocess.CalledProcessError:
-        return False
 
 def ensure_disk_access(directory, parent):
     expanded_directory = os.path.expanduser(directory)
@@ -49,3 +41,8 @@ def request_disk_access(parent):
 def check_oscar_installed():
     oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
     return oscar_installed.returncode == 0
+
+def request_accessibility_access(parent):
+    QMessageBox.information(parent, 'Accessibility Access',
+                            'Please enable accessibility access for this application in System Preferences.')
+    subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
