@@ -299,7 +299,7 @@
                       <property name="side">right</property>
                     </layout>
                     <child>
-                      <object class="ttk.Button" id="saveBtn">
+                      <object class="ttk.Button" id="saveButton" named="True">
                         <property name="text" translatable="yes">Save</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="save_config" add="" />
                         <layout manager="pack">
@@ -312,7 +312,7 @@
                       </object>
                     </child>
                     <child>
-                      <object class="ttk.Button" id="defaultBtn">
+                      <object class="ttk.Button" id="restoreButton" named="True">
                         <property name="text" translatable="yes">Defaults</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="restore_defaults" add="" />
                         <layout manager="pack">
@@ -343,7 +343,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Button" id="startBtn">
+              <object class="ttk.Button" id="startButton" named="True">
                 <property name="default">active</property>
                 <property name="state">normal</property>
                 <property name="takefocus">true</property>
@@ -370,7 +370,7 @@
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Button" id="button9">
+                  <object class="ttk.Button" id="cancelButton" named="True">
                     <property name="text" translatable="yes">Cancel</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_process" add="" />
                     <layout manager="pack">
@@ -383,7 +383,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Button" id="quitBtn" named="True">
+                  <object class="ttk.Button" id="quitButton" named="True">
                     <property name="text" translatable="yes">Quit</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="quit_application" add="" />
                     <layout manager="pack">

@@ -4,6 +4,7 @@ import sys
 import time
 from tkinter import filedialog
 
+
 def resource_path(relative_path):
     """
     Get the absolute path to the resource.
@@ -26,6 +27,7 @@ def ensure_disk_access(directory, parent):
         except PermissionError:
             request_disk_access(parent)
 
+
 def check_disk_access(directory):
     """
     Check if the application has access to the specified directory.
@@ -37,12 +39,12 @@ def check_disk_access(directory):
     except PermissionError:
         return False
 
+
 def request_disk_access(parent):
     """
     Request access to the disk from the user.
     """
-    options = {}
-    options['initialdir'] = '/'
+    options = {'initialdir': '/'}
     directory = filedialog.askdirectory(**options)
     if directory:
         parent.config['Settings']['path'] = directory
@@ -51,12 +53,14 @@ def request_disk_access(parent):
     else:
         print("No directory selected")
 
+
 def check_oscar_installed():
     """
     Check if the OSCAR application is installed.
     """
     oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
     return oscar_installed.returncode == 0
+
 
 def retry(func, retries=3, delay=1, backoff=2):
     """
@@ -78,3 +82,24 @@ def retry(func, retries=3, delay=1, backoff=2):
                 delay *= backoff
             else:
                 raise e
+
+
+def set_window_location(config, window):
+    """
+    Set the window location based on the configuration.
+    """
+    x = config['Window'].get('x', '100')
+    y = config['Window'].get('y', '100')
+    window.geometry(f'+{x}+{y}')
+
+
+def save_window_location(config, window):
+    """
+    Save the current window location to the configuration.
+    """
+    x = window.winfo_x()
+    y = window.winfo_y()
+    config['Window'] = {
+        'x': x,
+        'y': y
+    }

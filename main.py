@@ -2,24 +2,24 @@ import pathlib
 import tkinter as tk
 import tkinter.ttk as ttk
 import queue
-import requests
-import subprocess
-import time
-import webbrowser
 import pygubu
+import subprocess
+import requests
+import time
+from wifi import reconnect_to_original_wifi, connect_to_wifi, wifi_connected
 from tkinter import messagebox, BooleanVar
 from ezshare import EzShare
 from worker import EzShareWorker
-from wifi import connect_to_wifi, wifi_connected, reconnect_to_original_wifi
-from utils import check_oscar_installed, ensure_disk_access
-from config import init_config, save_config
+from utils import ensure_disk_access
+from config import init_config
+from ui_init import initialize_ui
+from callbacks import (start_process, cancel_process, quit_application,
+                       open_oscar_download_page, load_config_ui, save_config, restore_defaults,
+                       update_checkboxes, close_event_handler)
 
-PROJECT_PATH = pathlib.Path(__file__).parent
-PROJECT_UI = PROJECT_PATH / "ezshare.ui"
-RESOURCE_PATHS = [PROJECT_PATH]
 
 class EzShareCPAPUI:
-    def __init__(self, master=None, on_first_object_cb=None):
+    def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config = init_config(self.config_file)
         self.ezshare = EzShare()
@@ -28,12 +28,9 @@ class EzShareCPAPUI:
         self.is_running = False
         self.status_timer = None
 
-        # Initialize the pygubu builder
-        self.builder = pygubu.Builder(on_first_object=on_first_object_cb)
-        self.builder.add_resource_paths(RESOURCE_PATHS)
-        self.builder.add_from_file(PROJECT_UI)
-        
-        # Create the main window
+        # Initialize the Pygubu builder and UI
+        self.builder = pygubu.Builder()
+        self.builder.add_from_file('ezshare.ui')
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
 
@@ -45,136 +42,10 @@ class EzShareCPAPUI:
         self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
         self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
 
-        # Create the menu
-        self.create_menu()
-
-        # Find the downloadOscarLink label and bind it
-        self.download_label = self.builder.get_object('downloadOscarLink')
-        self.download_label.bind("<Button-1>", self.open_oscar_download_page)
-
         # Initialize the configuration and UI
-        self.load_config()
-        self.update_checkboxes()
+        load_config_ui(self)
+        update_checkboxes(self)
         ensure_disk_access(self.config['Settings']['path'], self)
-
-    def create_menu(self):
-        menubar = tk.Menu(self.mainwindow)
-        self.mainwindow.config(menu=menubar)
-
-        file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Settings", menu=file_menu)
-        file_menu.add_command(label="Restore Defaults", command=self.restore_defaults)
-        file_menu.add_command(label="Save", command=self.save_config)
-
-        tools_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Tools", menu=tools_menu)
-        tools_menu.add_command(label="Configure ez Share WiFi", command=self.ez_share_config)
-        tools_menu.add_command(label="Check Access To OSCAR", command=self.check_oscar_access)
-
-    def run(self):
-        self.mainwindow.mainloop()
-
-    def load_config(self):
-        self.config.read(self.config_file)
-        pathchooser = self.builder.get_object('path')
-        pathchooser.configure(path=self.config['Settings'].get('path', '~/Documents/CPAP_Data/SD_card'))
-        self.builder.get_object('urlEntry').insert(0, self.config['Settings'].get('url', 'http://192.168.4.1/dir?dir=A:'))
-        self.builder.get_object('ssidEntry').insert(0, self.config['WiFi'].get('ssid', 'ez Share'))
-        self.builder.get_object('pskEntry').insert(0, self.config['WiFi'].get('psk', '88888888'))
-        self.quit_var.set(self.config['Settings'].getboolean('quit_after_completion', False))
-        self.import_oscar_var.set(self.config['Settings'].getboolean('import_oscar', False))
-        self.apply_window_location()
-
-    def save_config(self, event=None):
-        pathchooser = self.builder.get_object('path')
-        self.config['Settings'] = {
-            'path': pathchooser.cget('path'),
-            'url': self.builder.get_object('urlEntry').get(),
-            'import_oscar': str(self.import_oscar_var.get()),
-            'quit_after_completion': str(self.quit_var.get())
-        }
-        self.config['WiFi'] = {
-            'ssid': self.builder.get_object('ssidEntry').get(),
-            'psk': self.builder.get_object('pskEntry').get()
-        }
-        self.save_window_location()
-        save_config(self.config, self.config_file)
-        self.update_status('Settings have been saved.', 'info')
-
-    def save_window_location(self):
-        x = self.mainwindow.winfo_x()
-        y = self.mainwindow.winfo_y()
-        self.config['Window'] = {
-            'x': x,
-            'y': y
-        }
-
-    def apply_window_location(self):
-        x = self.config['Window'].get('x', '100')
-        y = self.config['Window'].get('y', '100')
-        self.mainwindow.geometry(f'+{x}+{y}')
-
-    def start_process(self, event=None):
-        pathchooser = self.builder.get_object('path')
-        path = pathchooser.cget('path')
-        url = self.builder.get_object('urlEntry').get()
-        ssid = self.builder.get_object('ssidEntry').get()
-        psk = self.builder.get_object('pskEntry').get()
-
-        if not path or not url or not ssid:
-            self.update_status('Input Error: All fields must be filled out.', 'error')
-            return
-
-        expanded_path = pathlib.Path(path).expanduser()
-        if not expanded_path.is_dir():
-            self.update_status('Invalid Path: The specified path does not exist or is not a directory.', 'error')
-            return
-
-        self.config['Settings']['path'] = str(expanded_path)
-        self.config['Settings']['url'] = url
-        self.config['WiFi']['ssid'] = ssid
-        self.config['WiFi']['psk'] = psk
-        self.config['Settings']['quit_after_completion'] = str(self.quit_var.get())
-
-        self.ezshare.set_params(
-            path=expanded_path,
-            url=url,
-            start_time=None,
-            show_progress=True,
-            verbose=True,
-            overwrite=False,
-            keep_old=False,
-            ssid=ssid,
-            psk=psk,
-            ignore=[],
-            retries=3,
-            connection_delay=5,
-            debug=True
-        )
-
-        if self.worker and self.worker.is_alive():
-            self.worker.stop()
-            self.worker.join()
-
-        self.disable_ui_elements()
-        self.worker = EzShareWorker(self.ezshare, self.worker_queue)
-        self.worker.start()
-        self.is_running = True
-        self.mainwindow.after(100, self.process_worker_queue)
-
-    def process_worker_queue(self, event=None):
-        try:
-            msg = self.worker_queue.get_nowait()
-            if msg[0] == 'progress':
-                self.builder.get_object('progressBar')['value'] = msg[1]
-            elif msg[0] == 'status':
-                self.update_status(msg[1], msg[2])
-            elif msg[0] == 'finished':
-                self.process_finished()
-        except queue.Empty:
-            pass
-        if self.is_running:
-            self.mainwindow.after(100, self.process_worker_queue)
 
     def update_status(self, message, message_type='info'):
         current_status = self.builder.get_object('statusLabel')['text']
@@ -188,8 +59,37 @@ class EzShareCPAPUI:
                 self.status_timer = self.mainwindow.after(5000, self.reset_status)
 
     def reset_status(self):
-        if not self.is_running:
-            self.update_status('Ready.', 'info')
+        self.update_status('Ready.', 'info')
+
+    def disable_ui_elements(self):
+        self.builder.get_object('path').config(state=tk.DISABLED)
+        self.builder.get_object('startButton').config(state=tk.DISABLED)
+        self.builder.get_object('saveButton').config(state=tk.DISABLED)
+        self.builder.get_object('restoreButton').config(state=tk.DISABLED)
+        self.builder.get_object('quitButton').config(state=tk.DISABLED)
+        self.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
+
+    def enable_ui_elements(self):
+        self.builder.get_object('path').config(state=tk.NORMAL)
+        self.builder.get_object('startButton').config(state=tk.NORMAL)
+        self.builder.get_object('saveButton').config(state=tk.NORMAL)
+        self.builder.get_object('restoreButton').config(state=tk.NORMAL)
+        self.builder.get_object('quitButton').config(state=tk.NORMAL)
+        self.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
+
+    def process_worker_queue(self):
+        try:
+            msg = self.worker_queue.get_nowait()
+            if msg[0] == 'progress':
+                self.builder.get_object('progressBar')['value'] = msg[1]
+            elif msg[0] == 'status':
+                self.update_status(msg[1], msg[2])
+            elif msg[0] == 'finished':
+                self.process_finished()
+        except queue.Empty:
+            pass
+        if self.is_running:
+            self.mainwindow.after(100, self.process_worker_queue)
 
     def process_finished(self):
         self.is_running = False
@@ -199,7 +99,6 @@ class EzShareCPAPUI:
             self.mainwindow.quit()
         else:
             self.update_status('Ready.', 'info')
-
         if self.import_oscar_var.get():
             self.import_cpap_data_with_oscar()
 
@@ -216,24 +115,6 @@ class EzShareCPAPUI:
         end tell
         '''
         subprocess.run(["osascript", "-e", script])
-
-    def cancel_process(self, event=None):
-        if self.worker and self.worker.is_alive():
-            self.worker.stop()
-            self.worker.join()
-            self.builder.get_object('progressBar')['value'] = 0
-            self.update_status('Process cancelled.', 'info')
-        self.is_running = False
-        self.enable_ui_elements()
-        if self.ezshare:
-            self.ezshare.disconnect_from_wifi()
-
-    def close_event_handler(self):
-        if self.worker and self.worker.is_alive():
-            self.cancel_process()
-        self.update_status('Ready.', 'info')
-        self.builder.get_object('progressBar')['value'] = 0
-        self.mainwindow.quit()
 
     def ez_share_config(self, event=None):
         msg = messagebox.askokcancel('ez Share Config',
@@ -285,87 +166,30 @@ class EzShareCPAPUI:
         else:
             self.update_status('Configuration cancelled.', 'info')
 
-    def check_oscar_access(self):
-        messagebox.showinfo('Accessibility Access',
-                        'Please enable accessibility access for this application in System Preferences.')
-        subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
+    def run(self):
+        self.mainwindow.mainloop()
 
-    def restore_defaults(self, event=None):
-        default_path = '~/Documents/CPAP_Data/SD_card'
-        default_url = 'http://192.168.4.1/dir?dir=A:'
-        default_ssid = 'ez Share'
-        default_psk = '88888888'
+    # Callbacks for Pygubu commands
+    def start_process(self, event=None):
+        start_process(self, event)
 
-        self.config['Settings'] = {
-            'path': default_path,
-            'url': default_url,
-            'import_oscar': 'False',
-            'quit_after_completion': 'False'
-        }
-        self.config['WiFi'] = {
-            'ssid': default_ssid,
-            'psk': default_psk
-        }
-        self.config['Window'] = {
-            'x': '100',
-            'y': '100'
-        }
-
-        # Clear and update the TextEdit fields with default values
-        path_field = self.builder.get_object("path")
-        path_field.configure(path=default_path)
-
-        url_entry = self.builder.get_object("urlEntry")
-        url_entry.delete(0, tk.END)
-        url_entry.insert(0, default_url)
-
-        ssid_entry = self.builder.get_object("ssidEntry")
-        ssid_entry.delete(0, tk.END)
-        ssid_entry.insert(0, default_ssid)
-
-        psk_entry = self.builder.get_object("pskEntry")
-        psk_entry.delete(0, tk.END)
-        psk_entry.insert(0, default_psk)
-
-        # Use the BooleanVar objects to update checkboxes
-        self.quit_var.set(False)
-        self.import_oscar_var.set(False)
-
-        self.update_status('Settings have been restored to defaults.', 'info')
-
-    def update_checkboxes(self):
-        oscar_installed = check_oscar_installed()
-        self.import_oscar_var.set(self.config['Settings'].getboolean('import_oscar', False) and oscar_installed)
-        self.builder.get_object('importOscarCheckbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
-        if oscar_installed:
-            self.builder.get_object('downloadOscarLink').pack_forget()
-        else:
-            self.builder.get_object('downloadOscarLink').pack(fill='both', expand=True, padx=10, pady=5, side='top')
-
-    def disable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.DISABLED)
-        self.builder.get_object('startBtn').config(state=tk.DISABLED)
-        self.builder.get_object('saveBtn').config(state=tk.DISABLED)
-        self.builder.get_object('defaultBtn').config(state=tk.DISABLED)
-        self.builder.get_object('quitBtn').config(state=tk.DISABLED)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
-
-    def enable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.NORMAL)
-        self.builder.get_object('startBtn').config(state=tk.NORMAL)
-        self.builder.get_object('saveBtn').config(state=tk.NORMAL)
-        self.builder.get_object('defaultBtn').config(state=tk.NORMAL)
-        self.builder.get_object('quitBtn').config(state=tk.NORMAL)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
+    def cancel_process(self, event=None):
+        cancel_process(self, event)
 
     def quit_application(self, event=None):
-        if self.worker and self.worker.is_alive():
-            self.worker.stop()
-            self.worker.join()
-        self.mainwindow.quit()
+        quit_application(self, event)
 
     def open_oscar_download_page(self, event=None):
-        webbrowser.open("https://www.sleepfiles.com/OSCAR/")
+        open_oscar_download_page(self, event)
+
+    def load_config_ui(self, event=None):
+        load_config_ui(self)
+
+    def save_config(self, event=None):
+        save_config(self, event)
+
+    def restore_defaults(self, event=None):
+        restore_defaults(self, event)
 
 
 if __name__ == "__main__":
