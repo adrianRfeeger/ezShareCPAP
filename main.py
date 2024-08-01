@@ -10,8 +10,8 @@ import pygubu
 from tkinter import messagebox, BooleanVar
 from ezshare import EzShare
 from worker import EzShareWorker
-from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi, reconnect_to_original_wifi
-from utils import check_oscar_installed, ensure_disk_access, resource_path
+from wifi import connect_to_wifi, wifi_connected, reconnect_to_original_wifi
+from utils import check_oscar_installed, ensure_disk_access
 from config import init_config, save_config
 
 PROJECT_PATH = pathlib.Path(__file__).parent
