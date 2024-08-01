@@ -57,7 +57,6 @@ class EzShare:
         self.ssid = ssid
         self.psk = psk
         self.previous_ssid = self.get_current_ssid()
-        self.previous_psk = self.get_current_psk(self.previous_ssid)
         self.ignore = ['.', '..', 'back to photo'] + ignore
         self.retries = retries
         self.retry = Retry(total=retries, backoff_factor=0.25)
@@ -74,18 +73,6 @@ class EzShare:
             return result.stdout.split(": ")[1].strip()
         except subprocess.CalledProcessError as e:
             self.print(f'Error getting current SSID: {e.stderr}')
-            return None
-
-    def get_current_psk(self, ssid):
-        """
-        Get the PSK for the specified SSID.
-        """
-        cmd = f"/usr/sbin/security find-generic-password -ga '{ssid}' | grep 'password:' | cut -d'\"' -f2"
-        try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            self.print(f'Error getting current PSK for {ssid}: {e.stderr}')
             return None
 
     def set_progress_callback(self, callback):
