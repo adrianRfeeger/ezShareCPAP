@@ -12,12 +12,18 @@ from utils import retry
 logger = logging.getLogger(__name__)
 
 def recursive_traversal(ezshare, url, dir_path, total_files, processed_files):
+    """
+    Recursively traverse directories and process files.
+    """
     files, dirs = list_dir(ezshare, url)
     processed_files = check_files(ezshare, files, url, dir_path, total_files, processed_files)
     processed_files = check_dirs(ezshare, dirs, url, dir_path, total_files, processed_files)
     return processed_files
 
 def list_dir(ezshare, url):
+    """
+    List files and directories from the specified URL.
+    """
     def fetch_directory():
         response = ezshare.session.get(url, timeout=5)
         response.raise_for_status()
@@ -64,6 +70,9 @@ def list_dir(ezshare, url):
     return files, dirs
 
 def check_files(ezshare, files, url, dir_path: pathlib.Path, total_files, processed_files):
+    """
+    Check and download files if needed.
+    """
     for filename, file_url, file_ts in files:
         local_path = dir_path / filename
         absolute_file_url = urllib.parse.urljoin(url, f'download?{file_url}')
@@ -78,9 +87,15 @@ def check_files(ezshare, files, url, dir_path: pathlib.Path, total_files, proces
     return processed_files
 
 def should_download(ezshare, local_path: pathlib.Path, file_ts):
+    """
+    Determine whether the file should be downloaded.
+    """
     return not (local_path.is_file() and not (ezshare.overwrite or local_path.stat().st_mtime < file_ts) and not ezshare.keep_old)
 
 def download_file(ezshare, url, file_path: pathlib.Path, file_ts=None):
+    """
+    Download a file from the specified URL.
+    """
     if file_path.is_file() and not (ezshare.overwrite or file_path.stat().st_mtime < file_ts) and not ezshare.keep_old:
         logger.info('File %s already exists and has not been updated. Skipping because overwrite is off.', str(file_path))
         return False
@@ -123,6 +138,9 @@ def download_file(ezshare, url, file_path: pathlib.Path, file_ts=None):
     return True
 
 def check_dirs(ezshare, dirs, url, dir_path: pathlib.Path, total_files, processed_files):
+    """
+    Check and traverse directories.
+    """
     for dirname, dir_url in dirs:
         new_dir_path = dir_path / dirname
         new_dir_path.mkdir(exist_ok=True)

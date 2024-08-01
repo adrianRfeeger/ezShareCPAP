@@ -5,6 +5,9 @@ import time
 from tkinter import filedialog
 
 def resource_path(relative_path):
+    """
+    Get the absolute path to the resource.
+    """
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -13,6 +16,9 @@ def resource_path(relative_path):
 
 
 def ensure_disk_access(directory, parent):
+    """
+    Ensure that the specified directory exists and request access if needed.
+    """
     expanded_directory = os.path.expanduser(directory)
     if not os.path.exists(expanded_directory):
         try:
@@ -21,6 +27,9 @@ def ensure_disk_access(directory, parent):
             request_disk_access(parent)
 
 def check_disk_access(directory):
+    """
+    Check if the application has access to the specified directory.
+    """
     expanded_directory = os.path.expanduser(directory)
     try:
         os.listdir(expanded_directory)
@@ -29,6 +38,9 @@ def check_disk_access(directory):
         return False
 
 def request_disk_access(parent):
+    """
+    Request access to the disk from the user.
+    """
     options = {}
     options['initialdir'] = '/'
     directory = filedialog.askdirectory(**options)
@@ -40,8 +52,11 @@ def request_disk_access(parent):
         print("No directory selected")
 
 def check_oscar_installed():
+    """
+    Check if the OSCAR application is installed.
+    """
     oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
-    return oscar_installed.returncode == 0\
+    return oscar_installed.returncode == 0
 
 def retry(func, retries=3, delay=1, backoff=2):
     """

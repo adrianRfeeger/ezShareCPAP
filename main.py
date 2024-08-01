@@ -1,5 +1,6 @@
 import pathlib
 import tkinter as tk
+import tkinter.ttk as ttk
 import queue
 import requests
 import subprocess
@@ -7,9 +8,9 @@ import time
 import webbrowser
 import pygubu
 from tkinter import messagebox, BooleanVar
-from ezshare import ezShare
+from ezshare import EzShare
 from worker import EzShareWorker
-from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi
+from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi, reconnect_to_original_wifi
 from utils import check_oscar_installed, ensure_disk_access, resource_path
 from config import init_config, save_config
 
@@ -21,7 +22,7 @@ class EzShareCPAPUI:
     def __init__(self, master=None, on_first_object_cb=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config = init_config(self.config_file)
-        self.ezshare = ezShare()
+        self.ezshare = EzShare()
         self.worker = None
         self.worker_queue = queue.Queue()
         self.is_running = False
@@ -82,7 +83,7 @@ class EzShareCPAPUI:
         self.builder.get_object('pskEntry').insert(0, self.config['WiFi'].get('psk', '88888888'))
         self.quit_var.set(self.config['Settings'].getboolean('quit_after_completion', False))
         self.import_oscar_var.set(self.config['Settings'].getboolean('import_oscar', False))
-        self.apply_window_geometry()
+        self.apply_window_location()
 
     def save_config(self, event=None):
         pathchooser = self.builder.get_object('path')
@@ -96,11 +97,11 @@ class EzShareCPAPUI:
             'ssid': self.builder.get_object('ssidEntry').get(),
             'psk': self.builder.get_object('pskEntry').get()
         }
-        self.save_window_geometry()
+        self.save_window_location()
         save_config(self.config, self.config_file)
         self.update_status('Settings have been saved.', 'info')
 
-    def save_window_geometry(self):
+    def save_window_location(self):
         x = self.mainwindow.winfo_x()
         y = self.mainwindow.winfo_y()
         self.config['Window'] = {
@@ -108,9 +109,10 @@ class EzShareCPAPUI:
             'y': y
         }
 
-    def apply_window_geometry(self):
+    def apply_window_location(self):
         x = self.config['Window'].get('x', '100')
         y = self.config['Window'].get('y', '100')
+        self.mainwindow.geometry(f'+{x}+{y}')
 
     def start_process(self, event=None):
         pathchooser = self.builder.get_object('path')
@@ -238,6 +240,7 @@ class EzShareCPAPUI:
                                      "To configure the ez Share SD card, the settings page will be opened with your default browser. Ensure that you update the settings in ezShareCPAP with any changes that you make to the SSID or PSK. P.S. the default password is 'admin'.")
         if msg:
             try:
+                self.update_status('Connecting to ez Share Wi-Fi...', 'info')
                 self.ezshare.set_params(
                     path=self.config['Settings']['path'],
                     url=self.config['Settings']['url'],
@@ -250,7 +253,7 @@ class EzShareCPAPUI:
                     psk=self.builder.get_object('pskEntry').get(),
                     ignore=[],
                     retries=3,
-                    connection_delay=5,
+                    connection_delay=5,  # Ensure connection_delay is set
                     debug=True
                 )
                 connect_to_wifi(self.ezshare)
@@ -263,6 +266,14 @@ class EzShareCPAPUI:
                         if response.status_code == 200:
                             self.update_status('HTTP server is reachable. Opening the configuration page...', 'info')
                             subprocess.run(['open', 'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'])
+                            messagebox.showinfo('Reconnect to Original Wi-Fi', 'Once configuration is complete click OK to reconnect to your original Wi-Fi network.')
+                            self.update_status('Reconnecting to original Wi-Fi...', 'info')
+                            success = reconnect_to_original_wifi(self.ezshare)
+                            if success:
+                                self.update_status('Reconnected to original Wi-Fi.', 'info')
+                            else:
+                                self.update_status('Failed to reconnect to original Wi-Fi. Please do so manually.', 'error')
+                            self.cancel_process()  # Call cancel_process after configuration
                         else:
                             self.update_status(f'Failed to reach the HTTP server. Status code: {response.status_code}', 'error')
                     except requests.RequestException as e:

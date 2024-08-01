@@ -3,6 +3,9 @@ import configparser
 
 
 def init_config(config_file):
+    """
+    Initialize the configuration file. If it doesn't exist, create it with default settings.
+    """
     config = configparser.ConfigParser()
     if not os.path.exists(config_file):
         config['Settings'] = {
@@ -44,5 +47,8 @@ def init_config(config_file):
 
 
 def save_config(config, config_file):
+    """
+    Save the current configuration to the specified file.
+    """
     with open(config_file, 'w') as configfile:
         config.write(configfile)
