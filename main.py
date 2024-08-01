@@ -1,19 +1,15 @@
 import pathlib
 import tkinter as tk
-import tkinter.ttk as ttk
 import queue
 import pygubu
-import subprocess
-import requests
-import time
-from wifi import reconnect_to_original_wifi, connect_to_wifi, wifi_connected
-from tkinter import messagebox, BooleanVar
+from tkinter import BooleanVar
 from ezshare import EzShare
 from utils import ensure_disk_access
 from config import init_config
 from callbacks import (start_process, cancel_process, quit_application,
-                       open_oscar_download_page, load_config_ui, save_config, restore_defaults,
+                       open_oscar_download_page, import_cpap_data_with_oscar, load_config_ui, save_config, restore_defaults,
                        update_checkboxes)
+from ez_share_config import ez_share_config
 
 
 class EzShareCPAPUI:
@@ -101,70 +97,6 @@ class EzShareCPAPUI:
         if self.import_oscar_var.get():
             self.import_cpap_data_with_oscar()
 
-    def import_cpap_data_with_oscar(self):
-        script = '''
-        tell application "OSCAR"
-            activate
-            delay 2
-            tell application "System Events"
-                tell process "OSCAR"
-                    click menu item "Import CPAP Card Data" of menu "File" of menu bar 1
-                end tell
-            end tell
-        end tell
-        '''
-        subprocess.run(["osascript", "-e", script])
-
-    def ez_share_config(self, event=None):
-        msg = messagebox.askokcancel('ez Share Config',
-                                     "To configure the ez Share SD card, the settings page will be opened with your default browser. Ensure that you update the settings in ezShareCPAP with any changes that you make to the SSID or PSK. P.S. the default password is 'admin'.")
-        if msg:
-            try:
-                self.update_status('Connecting to ez Share Wi-Fi...', 'info')
-                self.ezshare.set_params(
-                    path=self.config['Settings']['path'],
-                    url=self.config['Settings']['url'],
-                    start_time=None,
-                    show_progress=True,
-                    verbose=True,
-                    overwrite=False,
-                    keep_old=False,
-                    ssid=self.builder.get_object('ssidEntry').get(),
-                    psk=self.builder.get_object('pskEntry').get(),
-                    ignore=[],
-                    retries=3,
-                    connection_delay=5,  # Ensure connection_delay is set
-                    debug=True
-                )
-                connect_to_wifi(self.ezshare)
-                time.sleep(self.ezshare.connection_delay)
-                if wifi_connected(self.ezshare):
-                    self.update_status(f'Connected to {self.builder.get_object("ssidEntry").get()}.', 'info')
-                    self.update_status('Checking if the ez Share HTTP server is reachable...', 'info')
-                    try:
-                        response = requests.get('http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356', timeout=5)
-                        if response.status_code == 200:
-                            self.update_status('HTTP server is reachable. Opening the configuration page...', 'info')
-                            subprocess.run(['open', 'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'])
-                            messagebox.showinfo('Reconnect to Original Wi-Fi', 'Once configuration is complete click OK to reconnect to your original Wi-Fi network.')
-                            self.update_status('Reconnecting to original Wi-Fi...', 'info')
-                            success = reconnect_to_original_wifi(self.ezshare)
-                            if success:
-                                self.update_status('Reconnected to original Wi-Fi.', 'info')
-                            else:
-                                self.update_status('Failed to reconnect to original Wi-Fi. Please do so manually.', 'error')
-                            self.cancel_process()  # Call cancel_process after configuration
-                        else:
-                            self.update_status(f'Failed to reach the HTTP server. Status code: {response.status_code}', 'error')
-                    except requests.RequestException as e:
-                        self.update_status(f'Failed to reach the HTTP server. Error: {e}', 'error')
-                else:
-                    self.update_status('Failed to connect to the ez Share Wi-Fi.', 'error')
-            except RuntimeError as e:
-                self.update_status(f'Error: {e}', 'error')
-        else:
-            self.update_status('Configuration cancelled.', 'info')
-
     def run(self):
         self.mainwindow.mainloop()
 
@@ -191,6 +123,11 @@ class EzShareCPAPUI:
     def restore_defaults(self, event=None):
         restore_defaults(self, event)
 
+    def import_cpap_data_with_oscar(self, event=None):
+        import_cpap_data_with_oscar(self, event)
+    
+    def ez_share_config(self, event=None):
+        ez_share_config(self, event)
 
 if __name__ == "__main__":
     app = EzShareCPAPUI()
