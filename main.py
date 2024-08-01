@@ -57,7 +57,8 @@ class EzShareCPAPUI:
                 self.status_timer = self.mainwindow.after(5000, self.reset_status)
 
     def reset_status(self):
-        self.update_status('Ready.', 'info')
+        if not self.is_running:
+            self.update_status('Ready.', 'info')
 
     def disable_ui_elements(self):
         self.builder.get_object('path').config(state=tk.DISABLED)
@@ -169,6 +170,7 @@ class EzShareCPAPUI:
 
     # Callbacks for Pygubu commands
     def start_process(self, event=None):
+        self.is_running = True
         start_process(self, event)
 
     def cancel_process(self, event=None):
