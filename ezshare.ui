@@ -435,4 +435,108 @@
       </object>
     </child>
   </object>
+  <object class="pygubu.builder.widgets.dialog" id="ezMessageBox" named="True">
+    <property name="geometry">420x215</property>
+    <property name="height">100</property>
+    <property name="iconphoto">icon.png</property>
+    <property name="modal">true</property>
+    <property name="resizable">none</property>
+    <property name="takefocus">true</property>
+    <property name="title" translatable="yes">ezShareCPAP Alert!</property>
+    <property name="width">420</property>
+    <child>
+      <object class="ttk.Frame" id="frame5">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">x</property>
+          <property name="ipady">5</property>
+          <property name="pady">5</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Frame" id="frame7">
+            <property name="height">200</property>
+            <property name="relief">groove</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="ipadx">40</property>
+              <property name="ipady">40</property>
+              <property name="padx">5</property>
+              <property name="pady">0</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="tk.Message" id="message1" named="True">
+                <property name="borderwidth">2</property>
+                <property name="cursor">arrow</property>
+                <property name="font">{arial} 14 {}</property>
+                <property name="justify">center</property>
+                <property name="relief">flat</property>
+                <property name="takefocus">false</property>
+                <property name="text" translatable="yes">This is where the message will be</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="ipadx">10</property>
+                  <property name="ipady">10</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame8">
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">x</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Frame" id="frame9">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Button" id="msgCancelButton" named="True">
+                    <property name="text" translatable="yes">Cancel</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">x</property>
+                      <property name="padx">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="msgOkButton" named="True">
+                    <property name="default">active</property>
+                    <property name="text" translatable="yes">OK</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">x</property>
+                      <property name="padx">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
 </interface>
