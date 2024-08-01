@@ -11,14 +11,14 @@ from tkinter import messagebox, BooleanVar
 from ezshare import ezShare
 from worker import EzShareWorker
 from wifi import connect_to_wifi, wifi_connected, disconnect_from_wifi
-from utils import check_oscar_installed, ensure_disk_access, resource_path, request_accessibility_access
+from utils import check_oscar_installed, ensure_disk_access, resource_path
 from config import init_config, save_config
 
 PROJECT_PATH = pathlib.Path(__file__).parent
 PROJECT_UI = PROJECT_PATH / "ezshare.ui"
 RESOURCE_PATHS = [PROJECT_PATH]
 
-class ezShareCPAPUI:
+class EzShareCPAPUI:
     def __init__(self, master=None, on_first_object_cb=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config = init_config(self.config_file)
@@ -36,7 +36,7 @@ class ezShareCPAPUI:
         # Create the main window
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
-        
+
         # Initialize BooleanVars for checkbuttons
         self.quit_var = BooleanVar()
         self.import_oscar_var = BooleanVar()
@@ -44,6 +44,9 @@ class ezShareCPAPUI:
         # Link BooleanVars to checkbuttons
         self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
         self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
+
+        # Create the menu
+        self.create_menu()
 
         # Find the downloadOscarLink label and bind it
         self.download_label = self.builder.get_object('downloadOscarLink')
@@ -54,8 +57,19 @@ class ezShareCPAPUI:
         self.update_checkboxes()
         ensure_disk_access(self.config['Settings']['path'], self)
 
-        # Bind the quit button to the quit_application method
-        self.builder.get_object('quitBtn').config(command=self.quit_application)
+    def create_menu(self):
+        menubar = tk.Menu(self.mainwindow)
+        self.mainwindow.config(menu=menubar)
+
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Settings", menu=file_menu)
+        file_menu.add_command(label="Restore Defaults", command=self.restore_defaults)
+        file_menu.add_command(label="Save", command=self.save_config)
+
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+        tools_menu.add_command(label="Configure ez Share WiFi", command=self.ez_share_config)
+        tools_menu.add_command(label="Check Access To OSCAR", command=self.check_oscar_access)
 
     def run(self):
         self.mainwindow.mainloop()
@@ -268,9 +282,10 @@ class ezShareCPAPUI:
         else:
             self.update_status('Configuration cancelled.', 'info')
 
-    def closeEvent(self, event):
-        self.close_event_handler()
-        event.accept()
+    def check_oscar_access(self):
+        messagebox.showinfo('Accessibility Access',
+                        'Please enable accessibility access for this application in System Preferences.')
+        subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
 
     def restore_defaults(self, event=None):
         default_path = '~/Documents/CPAP_Data/SD_card'
@@ -353,5 +368,5 @@ class ezShareCPAPUI:
 
 
 if __name__ == "__main__":
-    app = ezShareCPAPUI()
+    app = EzShareCPAPUI()
     app.run()

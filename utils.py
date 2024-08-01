@@ -41,9 +41,3 @@ def request_disk_access(parent):
 def check_oscar_installed():
     oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
     return oscar_installed.returncode == 0
-
-def request_accessibility_access(parent):
-    messagebox.showinfo('Accessibility Access',
-                        'Please enable accessibility access for this application in System Preferences.',
-                        parent=parent)
-    subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
