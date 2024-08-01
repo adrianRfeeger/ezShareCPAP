@@ -9,13 +9,11 @@ import time
 from wifi import reconnect_to_original_wifi, connect_to_wifi, wifi_connected
 from tkinter import messagebox, BooleanVar
 from ezshare import EzShare
-from worker import EzShareWorker
 from utils import ensure_disk_access
 from config import init_config
-from ui_init import initialize_ui
 from callbacks import (start_process, cancel_process, quit_application,
                        open_oscar_download_page, load_config_ui, save_config, restore_defaults,
-                       update_checkboxes, close_event_handler)
+                       update_checkboxes)
 
 
 class EzShareCPAPUI:

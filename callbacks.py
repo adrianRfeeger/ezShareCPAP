@@ -5,9 +5,8 @@ import requests
 import subprocess
 import time
 from tkinter import messagebox
-from ezshare import EzShare
 from worker import EzShareWorker
-from utils import ensure_disk_access, check_oscar_installed
+from utils import check_oscar_installed
 from config import save_config_ui, restore_defaults_ui, load_config
 from wifi import reconnect_to_original_wifi, connect_to_wifi, wifi_connected
 def start_process(self, event=None):
