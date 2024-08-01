@@ -1,6 +1,5 @@
 import pathlib
 import tkinter as tk
-import tkinter.ttk as ttk
 import queue
 import requests
 import subprocess
@@ -102,23 +101,16 @@ class EzShareCPAPUI:
         self.update_status('Settings have been saved.', 'info')
 
     def save_window_geometry(self):
-        width = self.mainwindow.winfo_width()
-        height = self.mainwindow.winfo_height()
         x = self.mainwindow.winfo_x()
         y = self.mainwindow.winfo_y()
         self.config['Window'] = {
-            'width': width,
-            'height': height,
             'x': x,
             'y': y
         }
 
     def apply_window_geometry(self):
-        width = self.config['Window'].get('width', '800')
-        height = self.config['Window'].get('height', '600')
         x = self.config['Window'].get('x', '100')
         y = self.config['Window'].get('y', '100')
-        self.mainwindow.geometry(f'{width}x{height}+{x}+{y}')
 
     def start_process(self, event=None):
         pathchooser = self.builder.get_object('path')
@@ -304,8 +296,6 @@ class EzShareCPAPUI:
             'psk': default_psk
         }
         self.config['Window'] = {
-            'width': '800',
-            'height': '600',
             'x': '100',
             'y': '100'
         }

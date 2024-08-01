@@ -24,11 +24,11 @@
   <object class="tk.Toplevel" id="mainwindow">
     <property name="cursor">arrow</property>
     <property name="height">550</property>
-    <property name="maxsize">400|550</property>
-    <property name="minsize">400|500</property>
+    <property name="maxsize">420|550</property>
+    <property name="minsize">420|500</property>
     <property name="resizable">none</property>
     <property name="title" translatable="yes">ezShareCPAP</property>
-    <property name="width">400</property>
+    <property name="width">420</property>
     <child>
       <object class="ttk.Frame" id="frame1">
         <property name="cursor">arrow</property>

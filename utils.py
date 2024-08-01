@@ -1,7 +1,8 @@
 import os
 import subprocess
 import sys
-from tkinter import filedialog, messagebox
+import time
+from tkinter import filedialog
 
 def resource_path(relative_path):
     try:
@@ -40,4 +41,25 @@ def request_disk_access(parent):
 
 def check_oscar_installed():
     oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
-    return oscar_installed.returncode == 0
+    return oscar_installed.returncode == 0\
+
+def retry(func, retries=3, delay=1, backoff=2):
+    """
+    Retry a function with exponential backoff.
+
+    :param func: Function to retry
+    :param retries: Number of retries
+    :param delay: Initial delay between retries
+    :param backoff: Backoff multiplier
+    :return: Result of the function if successful
+    :raises: Exception if all retries fail
+    """
+    for i in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            if i < retries - 1:
+                time.sleep(delay)
+                delay *= backoff
+            else:
+                raise e

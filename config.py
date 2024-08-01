@@ -1,5 +1,4 @@
 import os
-import pathlib
 import configparser
 
 
@@ -17,8 +16,6 @@ def init_config(config_file):
             'psk': '88888888'
         }
         config['Window'] = {
-            'width': '800',
-            'height': '600',
             'x': '100',
             'y': '100'
         }
@@ -40,8 +37,6 @@ def init_config(config_file):
             }
         if 'Window' not in config:
             config['Window'] = {
-                'width': '800',
-                'height': '600',
                 'x': '100',
                 'y': '100'
             }

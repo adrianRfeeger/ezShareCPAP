@@ -7,6 +7,7 @@ import re
 import os
 import logging
 from tempfile import NamedTemporaryFile
+from utils import retry
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,14 @@ def recursive_traversal(ezshare, url, dir_path, total_files, processed_files):
     return processed_files
 
 def list_dir(ezshare, url):
+    def fetch_directory():
+        response = ezshare.session.get(url, timeout=5)
+        response.raise_for_status()
+        return response
+
     try:
-        html_content = requests.get(url, timeout=5)
-        soup = bs4.BeautifulSoup(html_content.text, 'html.parser')
+        response = retry(fetch_directory, retries=3, delay=1, backoff=2)
+        soup = bs4.BeautifulSoup(response.text, 'html.parser')
     except requests.RequestException as e:
         logger.error(f"Error fetching directory listing from {url}: {e}")
         return [], []
@@ -74,16 +80,20 @@ def check_files(ezshare, files, url, dir_path: pathlib.Path, total_files, proces
 def should_download(ezshare, local_path: pathlib.Path, file_ts):
     return not (local_path.is_file() and not (ezshare.overwrite or local_path.stat().st_mtime < file_ts) and not ezshare.keep_old)
 
-
 def download_file(ezshare, url, file_path: pathlib.Path, file_ts=None):
     if file_path.is_file() and not (ezshare.overwrite or file_path.stat().st_mtime < file_ts) and not ezshare.keep_old:
         logger.info('File %s already exists and has not been updated. Skipping because overwrite is off.', str(file_path))
         return False
 
     logger.debug('Downloading %s from %s', str(file_path), url)
-    try:
+
+    def fetch_file():
         response = ezshare.session.get(url, stream=True)
         response.raise_for_status()
+        return response
+
+    try:
+        response = retry(fetch_file, retries=3, delay=1, backoff=2)
     except requests.RequestException as e:
         logger.error(f'Error downloading file {file_path}: {e}')
         return False
