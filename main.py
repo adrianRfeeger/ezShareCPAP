@@ -21,7 +21,7 @@ class EzShareCPAPUI:
         self.status_timer = None
 
         self.builder = pygubu.Builder()
-        self.builder.add_from_file('ezshare.ui')
+        self.builder.add_from_file('ezsharecpap.ui')
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
 
