@@ -4,10 +4,10 @@ import queue
 import pygubu
 from tkinter import BooleanVar, messagebox
 from ezshare import EzShare
-from utils import ensure_disk_access, update_status, disable_ui_elements, enable_ui_elements
 from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
+from status_manager import update_status
 import logging
 
 class EzShareCPAPUI:
@@ -36,7 +36,7 @@ class EzShareCPAPUI:
 
         self.load_config()
         self.callbacks.update_checkboxes()
-        ensure_disk_access(self.config_manager.get_setting('Settings', 'path'), self)
+        self.ensure_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -48,10 +48,20 @@ class EzShareCPAPUI:
             self.update_status('Ready.', 'info')
 
     def disable_ui_elements(self):
-        disable_ui_elements(self)
+        self.builder.get_object('path').config(state=tk.DISABLED)
+        self.builder.get_object('startButton').config(state=tk.DISABLED)
+        self.builder.get_object('saveButton').config(state=tk.DISABLED)
+        self.builder.get_object('restoreButton').config(state=tk.DISABLED)
+        self.builder.get_object('quitButton').config(state=tk.DISABLED)
+        self.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
 
     def enable_ui_elements(self):
-        enable_ui_elements(self)
+        self.builder.get_object('path').config(state=tk.NORMAL)
+        self.builder.get_object('startButton').config(state=tk.NORMAL)
+        self.builder.get_object('saveButton').config(state=tk.NORMAL)
+        self.builder.get_object('restoreButton').config(state=tk.NORMAL)
+        self.builder.get_object('quitButton').config(state=tk.NORMAL)
+        self.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
 
     def process_worker_queue(self):
         try:
@@ -129,6 +139,24 @@ class EzShareCPAPUI:
 
     def ez_share_config(self, event=None):
         self.ezshare_config.configure_ezshare(event)
+
+    def ensure_disk_access(self, directory):
+        expanded_directory = pathlib.Path(directory).expanduser()
+        if not expanded_directory.exists():
+            try:
+                expanded_directory.mkdir(parents=True)
+            except PermissionError:
+                self.request_disk_access()
+
+    def request_disk_access(self):
+        options = {'initialdir': '/'}
+        directory = tk.filedialog.askdirectory(**options)
+        if directory:
+            self.config_manager.set_setting('Settings', 'path', directory)
+            self.save_config()
+            print(f"Directory selected: {directory}")
+        else:
+            print("No directory selected")
 
 if __name__ == "__main__":
     app = EzShareCPAPUI()

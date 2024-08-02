@@ -8,6 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
+from status_manager import update_status
 
 class EzShare:
     def __init__(self):
@@ -54,15 +55,6 @@ class EzShare:
         self.retry = Retry(total=retries, backoff_factor=0.25)
         self.connection_delay = connection_delay
         self.session.mount('http://', HTTPAdapter(max_retries=self.retry))
-
-    def get_current_ssid(self):
-        cmd = "networksetup -getairportnetwork en0"
-        try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
-            return result.stdout.split(": ")[1].strip()
-        except subprocess.CalledProcessError as e:
-            self.print(f'Error getting current SSID: {e.stderr}')
-            return None
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback

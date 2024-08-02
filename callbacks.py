@@ -3,7 +3,8 @@ import webbrowser
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
-from utils import check_oscar_installed, ensure_directory_exists_and_writable, update_status
+from utils import check_oscar_installed, ensure_directory_exists_and_writable
+from status_manager import update_status
 
 class Callbacks:
     def __init__(self, app):
