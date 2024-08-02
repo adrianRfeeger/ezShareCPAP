@@ -9,6 +9,14 @@ from status_manager import update_status
 class Callbacks:
     def __init__(self, app):
         self.app = app
+        self.start_button_active = True
+        self.cancel_button_active = True
+        self.quit_button_active = True
+        self.open_oscar_button_active = True
+        self.load_config_button_active = True
+        self.save_button_active = True
+        self.restore_defaults_button_active = True
+        self.import_oscar_button_active = True
 
     def _set_config(self, settings):
         for section, items in settings.items():
@@ -16,6 +24,9 @@ class Callbacks:
                 self.app.config_manager.set_setting(section, key, value)
 
     def start_process(self, event=None):
+        if not self.start_button_active:
+            return
+
         pathchooser = self.app.builder.get_object('local_directory_path')
         path = pathchooser.cget('path')
         url = self.app.builder.get_object('url_entry').get()
@@ -64,6 +75,9 @@ class Callbacks:
         self.app.main_window.after(100, self.app.process_worker_queue)
 
     def cancel_process(self, event=None):
+        if not self.cancel_button_active:
+            return
+
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
@@ -75,21 +89,32 @@ class Callbacks:
             self.app.ezshare.disconnect_from_wifi()
 
     def quit_application(self, event=None):
+        if not self.quit_button_active:
+            return
+
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
         self.app.main_window.quit()
 
     def open_oscar_download_page(self, event=None):
+        if not self.open_oscar_button_active:
+            return
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
     def load_config_ui(self, event=None):
+        if not self.load_config_button_active:
+            return
         self.app.load_config()
 
     def save_config(self, event=None):
+        if not self.save_button_active:
+            return
         self.app.save_config(event)
 
     def restore_defaults(self, event=None):
+        if not self.restore_defaults_button_active:
+            return
         self.app.config_manager.restore_defaults()
         self.app.load_config()
         update_status(self.app, 'Settings have been restored to defaults.', 'info')
@@ -111,6 +136,9 @@ class Callbacks:
         self.app.main_window.quit()
 
     def import_cpap_data_with_oscar(self, event=None):
+        if not self.import_oscar_button_active:
+            return
+
         script = '''
         tell application "OSCAR"
             activate

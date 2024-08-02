@@ -1,7 +1,7 @@
+# ezshare.py
 import pathlib
 import logging
 import requests
-import time
 import urllib.parse
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -73,7 +73,7 @@ class ezShare:
             print(message)
         self.update_status(message)
 
-    def run(self):
+    def run(self, after_callback=None):
         self.update_status('Starting process...')
         try:
             if self.ssid:
@@ -88,30 +88,35 @@ class ezShare:
                     return
 
                 self.print('Waiting a few seconds for connection to establish...')
-                time.sleep(self.connection_delay)
+                if after_callback:
+                    after_callback(self.connection_delay * 1000, self.run_after_connection_delay)
+                else:
+                    self.run_after_connection_delay()
 
-            if not wifi_connected(self):
-                self.update_status('Unable to connect automatically, please connect manually.', 'error')
-                logging.warning('No Wi-Fi connection was established. Attempting to continue...')
-                return
-
-            self.path.mkdir(parents=True, exist_ok=True)
-            self.update_status(f'Path {self.path} created.')
-
-            self.update_status('Establishing files for download...')
-            self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
-            self.update_status(f'Total files to sync: {self.total_files}')
-            
-            if self.total_files == 0:
-                self.update_status('No files to sync. Process completed.')
-                return
-
-            self.update_status('Starting file transfer...')
-            self.processed_files = recursive_traversal(self, self.url, self.path, self.total_files, self.processed_files)
-            self.update_status('File transfer completed.')
         finally:
             disconnect_from_wifi(self)
             self.update_status('Disconnected from Wi-Fi.')
+
+    def run_after_connection_delay(self):
+        if not wifi_connected(self):
+            self.update_status('Unable to connect automatically, please connect manually.', 'error')
+            logging.warning('No Wi-Fi connection was established. Attempting to continue...')
+            return
+
+        self.path.mkdir(parents=True, exist_ok=True)
+        self.update_status(f'Path {self.path} created.')
+
+        self.update_status('Establishing files for download...')
+        self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
+        self.update_status(f'Total files to sync: {self.total_files}')
+
+        if self.total_files == 0:
+            self.update_status('No files to sync. Process completed.')
+            return
+
+        self.update_status('Starting file transfer...')
+        self.processed_files = recursive_traversal(self, self.url, self.path, self.total_files, self.processed_files)
+        self.update_status('File transfer completed.')
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
