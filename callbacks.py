@@ -11,11 +11,11 @@ class Callbacks:
         self.app = app
 
     def start_process(self, event=None):
-        pathchooser = self.app.builder.get_object('path')
+        pathchooser = self.app.builder.get_object('local_directory_path')
         path = pathchooser.cget('path')
-        url = self.app.builder.get_object('urlEntry').get()
-        ssid = self.app.builder.get_object('ssidEntry').get()
-        psk = self.app.builder.get_object('pskEntry').get()
+        url = self.app.builder.get_object('url_entry').get()
+        ssid = self.app.builder.get_object('ssid_entry').get()
+        psk = self.app.builder.get_object('psk_entry').get()
 
         if not path or not url or not ssid:
             update_status(self.app, 'Input Error: All fields must be filled out.', 'error')
@@ -56,13 +56,13 @@ class Callbacks:
         self.app.worker = EzShareWorker(self.app.ezshare, self.app.worker_queue)
         self.app.worker.start()
         self.app.is_running = True
-        self.app.mainwindow.after(100, self.app.process_worker_queue)
+        self.app.main_window.after(100, self.app.process_worker_queue)
 
     def cancel_process(self, event=None):
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
-            self.app.builder.get_object('progressBar')['value'] = 0
+            self.app.builder.get_object('progress_bar')['value'] = 0
             update_status(self.app, 'Process cancelled.', 'info')
         self.app.is_running = False
         self.app.enable_ui_elements()
@@ -73,7 +73,7 @@ class Callbacks:
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
-        self.app.mainwindow.quit()
+        self.app.main_window.quit()
 
     def open_oscar_download_page(self, event=None):
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
@@ -92,18 +92,18 @@ class Callbacks:
     def update_checkboxes(self):
         oscar_installed = check_oscar_installed()
         self.app.import_oscar_var.set(self.app.config_manager.get_setting('Settings', 'import_oscar') == 'True' and oscar_installed)
-        self.app.builder.get_object('importOscarCheckbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
+        self.app.builder.get_object('import_oscar_checkbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
         if oscar_installed:
-            self.app.builder.get_object('downloadOscarLink').pack_forget()
+            self.app.builder.get_object('download_oscar_link').pack_forget()
         else:
-            self.app.builder.get_object('downloadOscarLink').pack(fill='both', expand=True, padx=10, pady=5, side='top')
+            self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
 
     def close_event_handler(self, event=None):  # Updated to accept the event argument
         if self.app.worker and self.app.worker.is_alive():
             self.cancel_process()
         update_status(self.app, 'Ready.', 'info')
-        self.app.builder.get_object('progressBar')['value'] = 0
-        self.app.mainwindow.quit()
+        self.app.builder.get_object('progress_bar')['value'] = 0
+        self.app.main_window.quit()
 
     def import_cpap_data_with_oscar(self, event=None):  # Updated to accept the event argument
         script = '''

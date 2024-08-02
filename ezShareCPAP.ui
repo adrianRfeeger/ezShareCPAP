@@ -21,7 +21,7 @@
     </settings>
     <customwidgets />
   </project>
-  <object class="tk.Toplevel" id="mainwindow">
+  <object class="tk.Toplevel" id="main_window" named="True">
     <property name="cursor">arrow</property>
     <property name="height">550</property>
     <property name="maxsize">420|550</property>
@@ -41,7 +41,7 @@
           <property name="side">top</property>
         </layout>
         <child>
-          <object class="ttk.Labelframe" id="labelframe2">
+          <object class="ttk.Labelframe" id="local_directory_frame" named="True">
             <property name="labelanchor">nw</property>
             <property name="takefocus">true</property>
             <property name="text" translatable="yes">Local Directory:</property>
@@ -54,7 +54,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="pygubu.widgets.PathChooserInput" id="path" named="True">
+              <object class="pygubu.widgets.PathChooserInput" id="local_directory_path" named="True">
                 <property name="mustexist">false</property>
                 <property name="state">normal</property>
                 <property name="textvariable">string:pathfield</property>
@@ -72,7 +72,7 @@
           </object>
         </child>
         <child>
-          <object class="ttk.Labelframe" id="url_" named="True">
+          <object class="ttk.Labelframe" id="url_frame" named="True">
             <property name="height">200</property>
             <property name="text" translatable="yes">URL:</property>
             <property name="width">200</property>
@@ -84,7 +84,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Entry" id="urlEntry">
+              <object class="ttk.Entry" id="url_entry" named="True">
                 <layout manager="pack">
                   <property name="anchor">nw</property>
                   <property name="expand">true</property>
@@ -135,7 +135,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Entry" id="ssidEntry">
+                  <object class="ttk.Entry" id="ssid_entry" named="True">
                     <layout manager="pack">
                       <property name="anchor">nw</property>
                       <property name="expand">true</property>
@@ -147,7 +147,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Button" id="ezShareConfigBtn">
+                  <object class="ttk.Button" id="configure_wifi_button" named="True">
                     <property name="text" translatable="yes">Configure</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="ez_share_config" add="" />
                     <layout manager="pack">
@@ -160,7 +160,7 @@
               </object>
             </child>
             <child>
-              <object class="ttk.Frame" id="frame11">
+              <object class="ttk.Frame" id="wifi_frame_inner2" named="True">
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
@@ -170,7 +170,7 @@
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Label" id="label1">
+                  <object class="ttk.Label" id="psk_label" named="True">
                     <property name="text" translatable="yes">PSK: </property>
                     <layout manager="pack">
                       <property name="anchor">w</property>
@@ -183,7 +183,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Entry" id="pskEntry">
+                  <object class="ttk.Entry" id="psk_entry" named="True">
                     <property name="show">*</property>
                     <layout manager="pack">
                       <property name="anchor">nw</property>
@@ -200,7 +200,7 @@
           </object>
         </child>
         <child>
-          <object class="ttk.Frame" id="frame18">
+          <object class="ttk.Frame" id="completion_settings_frame" named="True">
             <property name="height">200</property>
             <property name="relief">flat</property>
             <property name="width">200</property>
@@ -210,7 +210,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Frame" id="frame2">
+              <object class="ttk.Frame" id="completion_frame_inner1" named="True">
                 <property name="height">200</property>
                 <property name="width">300</property>
                 <layout manager="pack">
@@ -219,7 +219,7 @@
                   <property name="side">left</property>
                 </layout>
                 <child>
-                  <object class="ttk.Labelframe" id="labelframe1">
+                  <object class="ttk.Labelframe" id="completion_labelframe" named="True">
                     <property name="height">200</property>
                     <property name="relief">ridge</property>
                     <property name="text" translatable="yes">On Completion:</property>
@@ -232,7 +232,7 @@
                       <property name="side">left</property>
                     </layout>
                     <child>
-                      <object class="ttk.Checkbutton" id="importOscarCheckbox">
+                      <object class="ttk.Checkbutton" id="import_oscar_checkbox" named="True">
                         <property name="state">normal</property>
                         <property name="style">TCheckbutton</property>
                         <property name="text" translatable="yes">Import with OSCAR</property>
@@ -246,7 +246,7 @@
                       </object>
                     </child>
                     <child>
-                      <object class="ttk.Label" id="downloadOscarLink" named="True">
+                      <object class="ttk.Label" id="download_oscar_link" named="True">
                         <property name="anchor">ne</property>
                         <property name="font">{arial} 12 {underline}</property>
                         <property name="foreground">#0660dd</property>
@@ -260,7 +260,7 @@
                       </object>
                     </child>
                     <child>
-                      <object class="ttk.Checkbutton" id="quitCheckbox">
+                      <object class="ttk.Checkbutton" id="quit_checkbox" named="True">
                         <property name="state">normal</property>
                         <property name="style">TCheckbutton</property>
                         <property name="text" translatable="yes">Quit</property>
@@ -278,7 +278,7 @@
               </object>
             </child>
             <child>
-              <object class="ttk.Frame" id="frame4">
+              <object class="ttk.Frame" id="settings_frame" named="True">
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
@@ -288,7 +288,7 @@
                   <property name="side">right</property>
                 </layout>
                 <child>
-                  <object class="ttk.Labelframe" id="labelframe3">
+                  <object class="ttk.Labelframe" id="settings_labelframe" named="True">
                     <property name="relief">ridge</property>
                     <property name="text" translatable="yes">Settings:	</property>
                     <property name="width">200</property>
@@ -299,7 +299,7 @@
                       <property name="side">right</property>
                     </layout>
                     <child>
-                      <object class="ttk.Button" id="saveButton" named="True">
+                      <object class="ttk.Button" id="save_button" named="True">
                         <property name="text" translatable="yes">Save</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="save_config" add="" />
                         <layout manager="pack">
@@ -312,7 +312,7 @@
                       </object>
                     </child>
                     <child>
-                      <object class="ttk.Button" id="restoreButton" named="True">
+                      <object class="ttk.Button" id="restore_defaults_button" named="True">
                         <property name="text" translatable="yes">Defaults</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="restore_defaults" add="" />
                         <layout manager="pack">
@@ -331,7 +331,7 @@
           </object>
         </child>
         <child>
-          <object class="ttk.Frame" id="frame13">
+          <object class="ttk.Frame" id="start_cancel_frame" named="True">
             <property name="height">200</property>
             <property name="relief">flat</property>
             <property name="width">200</property>
@@ -343,7 +343,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Button" id="startButton" named="True">
+              <object class="ttk.Button" id="start_button" named="True">
                 <property name="default">active</property>
                 <property name="state">normal</property>
                 <property name="takefocus">true</property>
@@ -360,7 +360,7 @@
               </object>
             </child>
             <child>
-              <object class="ttk.Frame" id="frame14">
+              <object class="ttk.Frame" id="cancel_frame" named="True">
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
@@ -370,7 +370,7 @@
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Button" id="cancelButton" named="True">
+                  <object class="ttk.Button" id="cancel_button" named="True">
                     <property name="text" translatable="yes">Cancel</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_process" add="" />
                     <layout manager="pack">
@@ -383,7 +383,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Button" id="quitButton" named="True">
+                  <object class="ttk.Button" id="quit_button" named="True">
                     <property name="text" translatable="yes">Quit</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="quit_application" add="" />
                     <layout manager="pack">
@@ -409,7 +409,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Progressbar" id="progressBar">
+              <object class="ttk.Progressbar" id="progress_bar" named="True">
                 <layout manager="pack">
                   <property name="anchor">center</property>
                   <property name="expand">true</property>
@@ -421,7 +421,7 @@
               </object>
             </child>
             <child>
-              <object class="ttk.Label" id="statusLabel" named="True">
+              <object class="ttk.Label" id="status_label" named="True">
                 <property name="text" translatable="yes">Ready.</property>
                 <layout manager="pack">
                   <property name="padx">20</property>
@@ -435,7 +435,7 @@
       </object>
     </child>
   </object>
-  <object class="pygubu.builder.widgets.dialog" id="ezMessageBox" named="True">
+  <object class="pygubu.builder.widgets.dialog" id="message_box" named="True">
     <property name="geometry">420x215</property>
     <property name="height">100</property>
     <property name="iconphoto">icon.png</property>
@@ -445,7 +445,7 @@
     <property name="title" translatable="yes">ezShareCPAP Alert!</property>
     <property name="width">420</property>
     <child>
-      <object class="ttk.Frame" id="frame5">
+      <object class="ttk.Frame" id="message_frame" named="True">
         <property name="height">200</property>
         <property name="width">200</property>
         <layout manager="pack">
@@ -456,7 +456,7 @@
           <property name="side">top</property>
         </layout>
         <child>
-          <object class="ttk.Frame" id="frame7">
+          <object class="ttk.Frame" id="message_frame_inner1" named="True">
             <property name="height">200</property>
             <property name="relief">groove</property>
             <property name="width">200</property>
@@ -470,7 +470,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="tk.Message" id="message1" named="True">
+              <object class="tk.Message" id="message_content" named="True">
                 <property name="borderwidth">2</property>
                 <property name="cursor">arrow</property>
                 <property name="font">{arial} 14 {}</property>
@@ -492,7 +492,7 @@
           </object>
         </child>
         <child>
-          <object class="ttk.Frame" id="frame8">
+          <object class="ttk.Frame" id="message_frame_inner2" named="True">
             <layout manager="pack">
               <property name="expand">true</property>
               <property name="fill">x</property>
@@ -510,7 +510,7 @@
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Button" id="msgCancelButton" named="True">
+                  <object class="ttk.Button" id="message_cancel_button" named="True">
                     <property name="text" translatable="yes">Cancel</property>
                     <layout manager="pack">
                       <property name="expand">true</property>
@@ -521,7 +521,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Button" id="msgOkButton" named="True">
+                  <object class="ttk.Button" id="message_ok_button" named="True">
                     <property name="default">active</property>
                     <property name="text" translatable="yes">OK</property>
                     <layout manager="pack">

@@ -3,12 +3,10 @@ import logging
 import requests
 import time
 import urllib.parse
-import subprocess
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
-from status_manager import update_status
 
 class EzShare:
     def __init__(self):

@@ -22,14 +22,14 @@ class EzShareCPAPUI:
 
         self.builder = pygubu.Builder()
         self.builder.add_from_file('ezsharecpap.ui')
-        self.mainwindow = self.builder.get_object('mainwindow', master)
+        self.main_window = self.builder.get_object('main_window', master)
         self.builder.connect_callbacks(self)
 
         self.quit_var = BooleanVar()
         self.import_oscar_var = BooleanVar()
 
-        self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
-        self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
+        self.builder.get_object('quit_checkbox').config(variable=self.quit_var)
+        self.builder.get_object('import_oscar_checkbox').config(variable=self.import_oscar_var)
 
         self.callbacks = Callbacks(self)
         self.ezshare_config = EzShareConfig(self)
@@ -48,26 +48,26 @@ class EzShareCPAPUI:
             self.update_status('Ready.', 'info')
 
     def disable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.DISABLED)
-        self.builder.get_object('startButton').config(state=tk.DISABLED)
-        self.builder.get_object('saveButton').config(state=tk.DISABLED)
-        self.builder.get_object('restoreButton').config(state=tk.DISABLED)
-        self.builder.get_object('quitButton').config(state=tk.DISABLED)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
+        self.builder.get_object('local_directory_path').config(state=tk.DISABLED)
+        self.builder.get_object('start_button').config(state=tk.DISABLED)
+        self.builder.get_object('save_button').config(state=tk.DISABLED)
+        self.builder.get_object('restore_defaults_button').config(state=tk.DISABLED)
+        self.builder.get_object('quit_button').config(state=tk.DISABLED)
+        self.builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
 
     def enable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.NORMAL)
-        self.builder.get_object('startButton').config(state=tk.NORMAL)
-        self.builder.get_object('saveButton').config(state=tk.NORMAL)
-        self.builder.get_object('restoreButton').config(state=tk.NORMAL)
-        self.builder.get_object('quitButton').config(state=tk.NORMAL)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
+        self.builder.get_object('local_directory_path').config(state=tk.NORMAL)
+        self.builder.get_object('start_button').config(state=tk.NORMAL)
+        self.builder.get_object('save_button').config(state=tk.NORMAL)
+        self.builder.get_object('restore_defaults_button').config(state=tk.NORMAL)
+        self.builder.get_object('quit_button').config(state=tk.NORMAL)
+        self.builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
 
     def process_worker_queue(self):
         try:
             msg = self.worker_queue.get_nowait()
             if msg[0] == 'progress':
-                self.builder.get_object('progressBar')['value'] = msg[1]
+                self.builder.get_object('progress_bar')['value'] = msg[1]
             elif msg[0] == 'status':
                 self.update_status(msg[1], msg[2])
             elif msg[0] == 'finished':
@@ -75,21 +75,21 @@ class EzShareCPAPUI:
         except queue.Empty:
             pass
         if self.is_running:
-            self.mainwindow.after(100, self.process_worker_queue)
+            self.main_window.after(100, self.process_worker_queue)
 
     def process_finished(self):
         self.is_running = False
         self.enable_ui_elements()
-        self.builder.get_object('progressBar')['value'] = 0
+        self.builder.get_object('progress_bar')['value'] = 0
         if self.quit_var.get():
-            self.mainwindow.quit()
+            self.main_window.quit()
         else:
             self.update_status('Ready.', 'info')
         if self.import_oscar_var.get():
             self.callbacks.import_cpap_data_with_oscar()
 
     def run(self):
-        self.mainwindow.mainloop()
+        self.main_window.mainloop()
 
     def load_config(self):
         self.config_manager.load_config()
@@ -101,21 +101,21 @@ class EzShareCPAPUI:
         self.update_status('Settings have been saved.', 'info')
 
     def apply_config_to_ui(self):
-        self.builder.get_object("path").configure(path=self.config_manager.get_setting('Settings', 'path'))
-        self.builder.get_object("urlEntry").delete(0, tk.END)
-        self.builder.get_object("urlEntry").insert(0, self.config_manager.get_setting('Settings', 'url'))
-        self.builder.get_object("ssidEntry").delete(0, tk.END)
-        self.builder.get_object("ssidEntry").insert(0, self.config_manager.get_setting('WiFi', 'ssid'))
-        self.builder.get_object("pskEntry").delete(0, tk.END)
-        self.builder.get_object("pskEntry").insert(0, self.config_manager.get_setting('WiFi', 'psk'))
+        self.builder.get_object("local_directory_path").configure(path=self.config_manager.get_setting('Settings', 'path'))
+        self.builder.get_object("url_entry").delete(0, tk.END)
+        self.builder.get_object("url_entry").insert(0, self.config_manager.get_setting('Settings', 'url'))
+        self.builder.get_object("ssid_entry").delete(0, tk.END)
+        self.builder.get_object("ssid_entry").insert(0, self.config_manager.get_setting('WiFi', 'ssid'))
+        self.builder.get_object("psk_entry").delete(0, tk.END)
+        self.builder.get_object("psk_entry").insert(0, self.config_manager.get_setting('WiFi', 'psk'))
         self.quit_var.set(self.config_manager.get_setting('Settings', 'quit_after_completion') == 'True')
         self.import_oscar_var.set(self.config_manager.get_setting('Settings', 'import_oscar') == 'True')
 
     def apply_ui_to_config(self):
-        self.config_manager.set_setting('Settings', 'path', self.builder.get_object('path').cget('path'))
-        self.config_manager.set_setting('Settings', 'url', self.builder.get_object('urlEntry').get())
-        self.config_manager.set_setting('WiFi', 'ssid', self.builder.get_object('ssidEntry').get())
-        self.config_manager.set_setting('WiFi', 'psk', self.builder.get_object('pskEntry').get())
+        self.config_manager.set_setting('Settings', 'path', self.builder.get_object('local_directory_path').cget('path'))
+        self.config_manager.set_setting('Settings', 'url', self.builder.get_object('url_entry').get())
+        self.config_manager.set_setting('WiFi', 'ssid', self.builder.get_object('ssid_entry').get())
+        self.config_manager.set_setting('WiFi', 'psk', self.builder.get_object('psk_entry').get())
         self.config_manager.set_setting('Settings', 'quit_after_completion', str(self.quit_var.get()))
         self.config_manager.set_setting('Settings', 'import_oscar', str(self.import_oscar_var.get()))
 
