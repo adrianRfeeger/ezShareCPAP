@@ -1,4 +1,3 @@
-# ezshare.py
 import pathlib
 import logging
 import requests
@@ -130,3 +129,7 @@ class ezShare:
             absolute_dir_url = urllib.parse.urljoin(url, dir_url)
             total_files += self.calculate_total_files(absolute_dir_url, new_dir_path, overwrite)
         return total_files
+
+    def disconnect_from_wifi(self):
+        if self.connected:
+            disconnect_from_wifi(self)

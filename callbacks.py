@@ -1,3 +1,4 @@
+# callbacks.py
 import pathlib
 import webbrowser
 import tkinter as tk
@@ -69,6 +70,7 @@ class Callbacks:
             self.app.worker.join()
 
         self.app.disable_ui_elements()
+        self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
         self.app.worker = EzShareWorker(self.app.ezshare, self.app.worker_queue)
         self.app.worker.start()
         self.app.is_running = True
@@ -82,11 +84,13 @@ class Callbacks:
             self.app.worker.stop()
             self.app.worker.join()
             self.app.builder.get_object('progress_bar')['value'] = 0
-            update_status(self.app, 'Process cancelled.', 'info')
+        update_status(self.app, 'Process cancelled.', 'info')
         self.app.is_running = False
         self.app.enable_ui_elements()
+        self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
         if self.app.ezshare:
             self.app.ezshare.disconnect_from_wifi()
+        update_status(self.app, 'Ready.', 'info')  # Ensure the status is updated to Ready
 
     def quit_application(self, event=None):
         if not self.quit_button_active:

@@ -39,11 +39,11 @@ class EzShareCPAPUI:
         self.callbacks.update_checkboxes()
         self.ensure_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
-        logging.basicConfig(filename='application.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def disable_ui_elements(self):
         self.callbacks.start_button_active = False
-        self.callbacks.cancel_button_active = False
+        self.callbacks.cancel_button_active = True
         self.callbacks.quit_button_active = False
         self.callbacks.open_oscar_button_active = False
         self.callbacks.load_config_button_active = False
@@ -68,10 +68,13 @@ class EzShareCPAPUI:
         self.builder.get_object('cancel_button').config(default=tk.NORMAL)
 
     def update_status(self, message, message_type='info'):
+        logging.debug(f"Attempting to update status to '{message}' with type '{message_type}'")
         update_status(self, message, message_type)
 
     def reset_status(self):
+        logging.debug(f"Checking if status should be reset to 'Ready.' (is_running={self.is_running})")
         if not self.is_running:
+            logging.info("Resetting status to 'Ready.'")
             self.update_status('Ready.', 'info')
 
     def process_worker_queue(self):
@@ -89,6 +92,7 @@ class EzShareCPAPUI:
             self.main_window.after(100, self.process_worker_queue)
 
     def process_finished(self):
+        logging.info("Process finished")
         self.is_running = False
         self.enable_ui_elements()
         self.builder.get_object('progress_bar')['value'] = 0
@@ -100,6 +104,7 @@ class EzShareCPAPUI:
             self.callbacks.import_cpap_data_with_oscar()
 
     def run(self):
+        logging.info("Starting main application loop")
         self.main_window.mainloop()
 
     def load_config(self):
@@ -139,6 +144,7 @@ class EzShareCPAPUI:
         self.config_manager.set_setting('Settings', 'import_oscar', str(self.import_oscar_var.get()))
 
     def start_process(self, event=None):
+        self.is_running = True
         self.callbacks.start_process(event)
 
     def cancel_process(self, event=None):
@@ -157,6 +163,7 @@ class EzShareCPAPUI:
         self.callbacks.import_cpap_data_with_oscar(event)
 
     def ez_share_config(self, event=None):
+        self.is_running = True
         self.ezshare_config.configure_ezshare(event)
 
     def ensure_disk_access(self, directory):
