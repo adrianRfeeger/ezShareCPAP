@@ -6,15 +6,10 @@ import urllib.parse
 import subprocess
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi import connect_to_wifi, disconnect_from_wifi, wifi_connected
+from wifi import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
 
-
 class EzShare:
-    """
-    Class to manage file transfers from an EzShare SD card.
-    """
-
     def __init__(self):
         self.path = None
         self.url = None
@@ -27,7 +22,7 @@ class EzShare:
         self.previous_ssid = None
         self.previous_psk = None
         self.connection_id = None
-        self.interface_name = None
+        self.interface_name = get_interface_name()
         self.connected = False
         self.session = requests.Session()
         self.ignore = None
@@ -42,9 +37,6 @@ class EzShare:
 
     def set_params(self, path, url, start_time, show_progress, verbose,
                    overwrite, keep_old, ssid, psk, ignore, retries, connection_delay, debug):
-        """
-        Set parameters for the EzShare instance.
-        """
         log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARN
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                             level=log_level)
@@ -64,9 +56,6 @@ class EzShare:
         self.session.mount('http://', HTTPAdapter(max_retries=self.retry))
 
     def get_current_ssid(self):
-        """
-        Get the current SSID of the connected Wi-Fi network.
-        """
         cmd = "networksetup -getairportnetwork en0"
         try:
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
@@ -76,48 +65,30 @@ class EzShare:
             return None
 
     def set_progress_callback(self, callback):
-        """
-        Set the callback function for progress updates.
-        """
         self.progress_callback = callback
 
     def set_status_callback(self, callback):
-        """
-        Set the callback function for status updates.
-        """
         self.status_callback = callback
 
     def update_progress(self, value):
-        """
-        Update the progress percentage.
-        """
         if self.progress_callback:
             self.progress_callback(min(max(0, value), 100))
 
     def update_status(self, message):
-        """
-        Update the status message.
-        """
         if self.status_callback:
             self.status_callback(message)
 
     def print(self, message):
-        """
-        Print the status message if progress is being shown.
-        """
         if self.show_progress:
             print(message)
         self.update_status(message)
 
     def run(self):
-        """
-        Main method to start the file transfer process.
-        """
         self.update_status('Starting process...')
         try:
             if self.ssid:
                 self.update_status(f'Connecting to {self.ssid}...')
-                self.print(f'Connecting to {self.ssid}.')
+                self.print(f'Connecting to {self.ssid}...')
                 try:
                     connect_to_wifi(self)
                     self.update_status(f'Connected to {self.ssid}.')
@@ -141,7 +112,6 @@ class EzShare:
             self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
             self.update_status(f'Total files to sync: {self.total_files}')
             
-            # Check for zero files to sync
             if self.total_files == 0:
                 self.update_status('No files to sync. Process completed.')
                 return
@@ -154,9 +124,6 @@ class EzShare:
             self.update_status('Disconnected from Wi-Fi.')
 
     def calculate_total_files(self, url, dir_path, overwrite):
-        """
-        Calculate the total number of files to be synced.
-        """
         total_files = 0
         files, dirs = list_dir(self, url)
         for filename, _, file_ts in files:
@@ -170,9 +137,6 @@ class EzShare:
         return total_files
 
     def disconnect_from_wifi(self):
-        """
-        Disconnect from the Wi-Fi network.
-        """
         try:
             disconnect_from_wifi(self)
         except RuntimeError as e:

@@ -11,7 +11,6 @@ from callbacks import (start_process, cancel_process, quit_application,
                        update_checkboxes)
 from ez_share_config import ez_share_config
 
-
 class EzShareCPAPUI:
     def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
@@ -22,21 +21,17 @@ class EzShareCPAPUI:
         self.is_running = False
         self.status_timer = None
 
-        # Initialize the Pygubu builder and UI
         self.builder = pygubu.Builder()
         self.builder.add_from_file('ezshare.ui')
         self.mainwindow = self.builder.get_object('mainwindow', master)
         self.builder.connect_callbacks(self)
 
-        # Initialize BooleanVars for checkbuttons
         self.quit_var = BooleanVar()
         self.import_oscar_var = BooleanVar()
 
-        # Link BooleanVars to checkbuttons
         self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
         self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
 
-        # Initialize the configuration and UI
         load_config_ui(self)
         update_checkboxes(self)
         ensure_disk_access(self.config['Settings']['path'], self)
@@ -100,7 +95,6 @@ class EzShareCPAPUI:
     def run(self):
         self.mainwindow.mainloop()
 
-    # Callbacks for Pygubu commands
     def start_process(self, event=None):
         self.is_running = True
         start_process(self, event)
@@ -125,7 +119,7 @@ class EzShareCPAPUI:
 
     def import_cpap_data_with_oscar(self, event=None):
         import_cpap_data_with_oscar(self, event)
-    
+
     def ez_share_config(self, event=None):
         ez_share_config(self, event)
 

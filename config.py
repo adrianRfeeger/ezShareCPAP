@@ -3,9 +3,6 @@ import configparser
 import tkinter as tk
 
 def init_config(config_file):
-    """
-    Initialize the configuration file. If it doesn't exist, create it with default settings.
-    """
     config = configparser.ConfigParser()
     if not os.path.exists(config_file):
         config['Settings'] = {
@@ -45,19 +42,11 @@ def init_config(config_file):
             }
     return config
 
-
 def save_config(config, config_file):
-    """
-    Save the current configuration to the specified file.
-    """
     with open(config_file, 'w') as configfile:
         config.write(configfile)
 
-
 def restore_defaults_ui(config, builder, quit_var, import_oscar_var, update_status):
-    """
-    Restore the configuration to its default values and update the UI.
-    """
     config['Settings'] = {
         'path': '~/Documents/CPAP_Data/SD_card',
         'url': 'http://192.168.4.1/dir?dir=A:',
@@ -93,11 +82,7 @@ def restore_defaults_ui(config, builder, quit_var, import_oscar_var, update_stat
 
     update_status('Settings have been restored to defaults.', 'info')
 
-
 def load_config(config, builder, quit_var, import_oscar_var, mainwindow):
-    """
-    Load the configuration into the UI.
-    """
     pathchooser = builder.get_object('path')
     pathchooser.configure(path=config['Settings'].get('path', '~/Documents/CPAP_Data/SD_card'))
     builder.get_object('urlEntry').insert(0, config['Settings'].get('url', 'http://192.168.4.1/dir?dir=A:'))
@@ -107,11 +92,7 @@ def load_config(config, builder, quit_var, import_oscar_var, mainwindow):
     import_oscar_var.set(config['Settings'].getboolean('import_oscar', False))
     set_window_location(config, mainwindow)
 
-
 def save_config_ui(config, builder, config_file, mainwindow, quit_var, import_oscar_var, update_status):
-    """
-    Save the UI settings to the configuration.
-    """
     pathchooser = builder.get_object('path')
     config['Settings'] = {
         'path': pathchooser.cget('path'),
@@ -127,20 +108,12 @@ def save_config_ui(config, builder, config_file, mainwindow, quit_var, import_os
     save_config(config, config_file)
     update_status('Settings have been saved.', 'info')
 
-
 def set_window_location(config, window):
-    """
-    Set the window location based on the configuration.
-    """
     x = config['Window'].get('x', '100')
     y = config['Window'].get('y', '100')
     window.geometry(f'+{x}+{y}')
 
-
 def save_window_location(config, window):
-    """
-    Save the current window location to the configuration.
-    """
     x = window.winfo_x()
     y = window.winfo_y()
     config['Window'] = {

@@ -54,7 +54,6 @@ def start_process(self, event=None):
     self.is_running = True
     self.mainwindow.after(100, self.process_worker_queue)
 
-
 def cancel_process(self, event=None):
     if self.worker and self.worker.is_alive():
         self.worker.stop()
@@ -66,29 +65,23 @@ def cancel_process(self, event=None):
     if self.ezshare:
         self.ezshare.disconnect_from_wifi()
 
-
 def quit_application(self, event=None):
     if self.worker and self.worker.is_alive():
         self.worker.stop()
         self.worker.join()
     self.mainwindow.quit()
 
-
 def open_oscar_download_page(self, event=None):
     webbrowser.open("https://www.sleepfiles.com/OSCAR/")
-
 
 def load_config_ui(self):
     load_config(self.config, self.builder, self.quit_var, self.import_oscar_var, self.mainwindow)
 
-
 def save_config(self, event=None):
     save_config_ui(self.config, self.builder, self.config_file, self.mainwindow, self.quit_var, self.import_oscar_var, self.update_status)
 
-
 def restore_defaults(self, event=None):
     restore_defaults_ui(self.config, self.builder, self.quit_var, self.import_oscar_var, self.update_status)
-
 
 def update_checkboxes(self):
     oscar_installed = check_oscar_installed()
@@ -111,12 +104,11 @@ def import_cpap_data_with_oscar(self):
     tell application "OSCAR"
         activate
         delay 2
-            tell application "System Events"
+        tell application "System Events"
             tell process "OSCAR"
                 click menu item "Import CPAP Card Data" of menu "File" of menu bar 1
             end tell
         end tell
     end tell
-        '''
+    '''
     subprocess.run(["osascript", "-e", script])
-
