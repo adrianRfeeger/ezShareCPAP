@@ -9,7 +9,7 @@ a = Analysis(
     datas=[
         ('icon.icns', '.'), 
         ('config.ini', '.'),
-        ('ezshare.ui', '.')
+        ('ezsharecpap.ui', '.')
         ],
     hiddenimports=['ttkwidgets'],
     hookspath=[],
