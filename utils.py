@@ -38,8 +38,12 @@ def request_disk_access(parent):
         print("No directory selected")
 
 def check_oscar_installed():
-    oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True)
-    return oscar_installed.returncode == 0
+    try:
+        oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True, check=True)
+        return oscar_installed.returncode == 0
+    except subprocess.CalledProcessError as e:
+        print(f"Error checking OSCAR installation: {e}")
+        return False
 
 def retry(func, retries=3, delay=1, backoff=2):
     for i in range(retries):
@@ -51,6 +55,18 @@ def retry(func, retries=3, delay=1, backoff=2):
                 delay *= backoff
             else:
                 raise e
+
+def ensure_directory_exists_and_writable(path):
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        test_file = path / ".test_writable"
+        with test_file.open('w') as f:
+            f.write("test")
+        test_file.unlink()
+        return True
+    except Exception as e:
+        print(f"Error ensuring directory exists and is writable: {e}")
+        return False
 
 def set_window_location(config, window):
     x = config['Window'].get('x', '100')

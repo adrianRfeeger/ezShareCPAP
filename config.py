@@ -19,8 +19,7 @@ def init_config(config_file):
             'x': '100',
             'y': '100'
         }
-        with open(config_file, 'w') as configfile:
-            config.write(configfile)
+        save_config(config, config_file)
     else:
         config.read(config_file)
         if 'Settings' not in config:
@@ -43,8 +42,11 @@ def init_config(config_file):
     return config
 
 def save_config(config, config_file):
-    with open(config_file, 'w') as configfile:
-        config.write(configfile)
+    try:
+        with open(config_file, 'w') as configfile:
+            config.write(configfile)
+    except IOError as e:
+        print(f"Error saving config file: {e}")
 
 def restore_defaults_ui(config, builder, quit_var, import_oscar_var, update_status):
     config['Settings'] = {

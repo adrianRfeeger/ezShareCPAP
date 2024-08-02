@@ -3,7 +3,7 @@ import webbrowser
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
-from utils import check_oscar_installed
+from utils import check_oscar_installed, ensure_directory_exists_and_writable
 from config import save_config_ui, restore_defaults_ui, load_config
 
 def start_process(self, event=None):
@@ -18,8 +18,8 @@ def start_process(self, event=None):
         return
 
     expanded_path = pathlib.Path(path).expanduser()
-    if not expanded_path.is_dir():
-        self.update_status('Invalid Path: The specified path does not exist or is not a directory.', 'error')
+    if not ensure_directory_exists_and_writable(expanded_path):
+        self.update_status('Invalid Path: The specified path does not exist or is not writable.', 'error')
         return
 
     self.config['Settings']['path'] = str(expanded_path)
@@ -111,4 +111,7 @@ def import_cpap_data_with_oscar(self):
         end tell
     end tell
     '''
-    subprocess.run(["osascript", "-e", script])
+    try:
+        subprocess.run(["osascript", "-e", script], check=True)
+    except subprocess.CalledProcessError as e:
+        self.update_status(f"Error importing CPAP data with OSCAR: {e}", 'error')
