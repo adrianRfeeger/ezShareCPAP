@@ -2,43 +2,37 @@ import os
 import configparser
 import tkinter as tk
 
+DEFAULT_CONFIG = {
+    'Settings': {
+        'path': '~/Documents/CPAP_Data/SD_card',
+        'url': 'http://192.168.4.1/dir?dir=A:',
+        'import_oscar': 'False',
+        'quit_after_completion': 'False'
+    },
+    'WiFi': {
+        'ssid': 'ez Share',
+        'psk': '88888888'
+    },
+    'Window': {
+        'x': '100',
+        'y': '100'
+    }
+}
+
 def init_config(config_file):
     config = configparser.ConfigParser()
     if not os.path.exists(config_file):
-        config['Settings'] = {
-            'path': '~/Documents/CPAP_Data/SD_card',
-            'url': 'http://192.168.4.1/dir?dir=A:',
-            'import_oscar': 'False',
-            'quit_after_completion': 'False'
-        }
-        config['WiFi'] = {
-            'ssid': 'ez Share',
-            'psk': '88888888'
-        }
-        config['Window'] = {
-            'x': '100',
-            'y': '100'
-        }
+        config.read_dict(DEFAULT_CONFIG)
         save_config(config, config_file)
     else:
         config.read(config_file)
-        if 'Settings' not in config:
-            config['Settings'] = {
-                'path': '~/Documents/CPAP_Data/SD_card',
-                'url': 'http://192.168.4.1/dir?dir=A:',
-                'import_oscar': 'False',
-                'quit_after_completion': 'False'
-            }
-        if 'WiFi' not in config:
-            config['WiFi'] = {
-                'ssid': 'ez Share',
-                'psk': '88888888'
-            }
-        if 'Window' not in config:
-            config['Window'] = {
-                'x': '100',
-                'y': '100'
-            }
+        for section, values in DEFAULT_CONFIG.items():
+            if section not in config:
+                config[section] = values
+            else:
+                for key, value in values.items():
+                    if key not in config[section]:
+                        config[section][key] = value
     return config
 
 def save_config(config, config_file):
@@ -49,21 +43,11 @@ def save_config(config, config_file):
         print(f"Error saving config file: {e}")
 
 def restore_defaults_ui(config, builder, quit_var, import_oscar_var, update_status):
-    config['Settings'] = {
-        'path': '~/Documents/CPAP_Data/SD_card',
-        'url': 'http://192.168.4.1/dir?dir=A:',
-        'import_oscar': 'False',
-        'quit_after_completion': 'False'
-    }
-    config['WiFi'] = {
-        'ssid': 'ez Share',
-        'psk': '88888888'
-    }
-    config['Window'] = {
-        'x': '100',
-        'y': '100'
-    }
+    config.read_dict(DEFAULT_CONFIG)
+    apply_config_to_ui(config, builder, quit_var, import_oscar_var)
+    update_status('Settings have been restored to defaults.', 'info')
 
+def apply_config_to_ui(config, builder, quit_var, import_oscar_var):
     path_field = builder.get_object("path")
     path_field.configure(path=config['Settings']['path'])
 
@@ -79,33 +63,21 @@ def restore_defaults_ui(config, builder, quit_var, import_oscar_var, update_stat
     psk_entry.delete(0, tk.END)
     psk_entry.insert(0, config['WiFi']['psk'])
 
-    quit_var.set(False)
-    import_oscar_var.set(False)
-
-    update_status('Settings have been restored to defaults.', 'info')
-
-def load_config(config, builder, quit_var, import_oscar_var, mainwindow):
-    pathchooser = builder.get_object('path')
-    pathchooser.configure(path=config['Settings'].get('path', '~/Documents/CPAP_Data/SD_card'))
-    builder.get_object('urlEntry').insert(0, config['Settings'].get('url', 'http://192.168.4.1/dir?dir=A:'))
-    builder.get_object('ssidEntry').insert(0, config['WiFi'].get('ssid', 'ez Share'))
-    builder.get_object('pskEntry').insert(0, config['WiFi'].get('psk', '88888888'))
     quit_var.set(config['Settings'].getboolean('quit_after_completion', False))
     import_oscar_var.set(config['Settings'].getboolean('import_oscar', False))
+
+def load_config(config, builder, quit_var, import_oscar_var, mainwindow):
+    apply_config_to_ui(config, builder, quit_var, import_oscar_var)
     set_window_location(config, mainwindow)
 
 def save_config_ui(config, builder, config_file, mainwindow, quit_var, import_oscar_var, update_status):
     pathchooser = builder.get_object('path')
-    config['Settings'] = {
-        'path': pathchooser.cget('path'),
-        'url': builder.get_object('urlEntry').get(),
-        'import_oscar': str(import_oscar_var.get()),
-        'quit_after_completion': str(quit_var.get())
-    }
-    config['WiFi'] = {
-        'ssid': builder.get_object('ssidEntry').get(),
-        'psk': builder.get_object('pskEntry').get()
-    }
+    config['Settings']['path'] = pathchooser.cget('path')
+    config['Settings']['url'] = builder.get_object('urlEntry').get()
+    config['Settings']['import_oscar'] = str(import_oscar_var.get())
+    config['Settings']['quit_after_completion'] = str(quit_var.get())
+    config['WiFi']['ssid'] = builder.get_object('ssidEntry').get()
+    config['WiFi']['psk'] = builder.get_object('pskEntry').get()
     save_window_location(config, mainwindow)
     save_config(config, config_file)
     update_status('Settings have been saved.', 'info')

@@ -67,16 +67,3 @@ def ensure_directory_exists_and_writable(path):
     except Exception as e:
         print(f"Error ensuring directory exists and is writable: {e}")
         return False
-
-def set_window_location(config, window):
-    x = config['Window'].get('x', '100')
-    y = config['Window'].get('y', '100')
-    window.geometry(f'+{x}+{y}')
-
-def save_window_location(config, window):
-    x = window.winfo_x()
-    y = window.winfo_y()
-    config['Window'] = {
-        'x': x,
-        'y': y
-    }
