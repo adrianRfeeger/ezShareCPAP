@@ -6,7 +6,7 @@ import urllib.parse
 import subprocess
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
+from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
 
 class EzShare:
@@ -34,12 +34,15 @@ class EzShare:
         self.status_callback = None
         self.total_files = 0
         self.processed_files = 0
+        self._configure_logging()
+
+    def _configure_logging(self):
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     def set_params(self, path, url, start_time, show_progress, verbose,
                    overwrite, keep_old, ssid, psk, ignore, retries, connection_delay, debug):
         log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARN
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                            level=log_level)
+        logging.getLogger().setLevel(log_level)
         self.path = pathlib.Path(path).expanduser()
         self.url = url
         self.start_time = start_time

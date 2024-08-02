@@ -31,7 +31,7 @@ def request_disk_access(parent):
     options = {'initialdir': '/'}
     directory = filedialog.askdirectory(**options)
     if directory:
-        parent.config['Settings']['path'] = directory
+        parent.config_manager.set_setting('Settings', 'path', directory)
         parent.save_config()
         print(f"Directory selected: {directory}")
     else:

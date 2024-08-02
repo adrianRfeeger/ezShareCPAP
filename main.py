@@ -5,16 +5,14 @@ import pygubu
 from tkinter import BooleanVar
 from ezshare import EzShare
 from utils import ensure_disk_access
-from config import init_config
-from callbacks import (start_process, cancel_process, quit_application,
-                       open_oscar_download_page, import_cpap_data_with_oscar, load_config_ui, save_config, restore_defaults,
-                       update_checkboxes)
-from ez_share_config import ez_share_config
+from config_manager import ConfigManager
+from callbacks import Callbacks
+from ez_share_config import EzShareConfig
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
-        self.config = init_config(self.config_file)
+        self.config_manager = ConfigManager(self.config_file)
         self.ezshare = EzShare()
         self.worker = None
         self.worker_queue = queue.Queue()
@@ -32,9 +30,12 @@ class EzShareCPAPUI:
         self.builder.get_object('quitCheckbox').config(variable=self.quit_var)
         self.builder.get_object('importOscarCheckbox').config(variable=self.import_oscar_var)
 
-        load_config_ui(self)
-        update_checkboxes(self)
-        ensure_disk_access(self.config['Settings']['path'], self)
+        self.callbacks = Callbacks(self)
+        self.ezshare_config = EzShareConfig(self)
+
+        self.load_config()
+        self.callbacks.update_checkboxes()
+        ensure_disk_access(self.config_manager.get_setting('Settings', 'path'), self)
 
     def update_status(self, message, message_type='info'):
         current_status = self.builder.get_object('statusLabel')['text']
@@ -90,38 +91,59 @@ class EzShareCPAPUI:
         else:
             self.update_status('Ready.', 'info')
         if self.import_oscar_var.get():
-            self.import_cpap_data_with_oscar()
+            self.callbacks.import_cpap_data_with_oscar()
 
     def run(self):
         self.mainwindow.mainloop()
 
+    def load_config(self):
+        self.config_manager.load_config()
+        self.apply_config_to_ui()
+
+    def save_config(self, event=None):  # Updated to accept the event argument
+        self.apply_ui_to_config()
+        self.config_manager.save_config()
+        self.update_status('Settings have been saved.', 'info')
+
+    def apply_config_to_ui(self):
+        self.builder.get_object("path").configure(path=self.config_manager.get_setting('Settings', 'path'))
+        self.builder.get_object("urlEntry").delete(0, tk.END)
+        self.builder.get_object("urlEntry").insert(0, self.config_manager.get_setting('Settings', 'url'))
+        self.builder.get_object("ssidEntry").delete(0, tk.END)
+        self.builder.get_object("ssidEntry").insert(0, self.config_manager.get_setting('WiFi', 'ssid'))
+        self.builder.get_object("pskEntry").delete(0, tk.END)
+        self.builder.get_object("pskEntry").insert(0, self.config_manager.get_setting('WiFi', 'psk'))
+        self.quit_var.set(self.config_manager.get_setting('Settings', 'quit_after_completion') == 'True')
+        self.import_oscar_var.set(self.config_manager.get_setting('Settings', 'import_oscar') == 'True')
+
+    def apply_ui_to_config(self):
+        self.config_manager.set_setting('Settings', 'path', self.builder.get_object('path').cget('path'))
+        self.config_manager.set_setting('Settings', 'url', self.builder.get_object('urlEntry').get())
+        self.config_manager.set_setting('WiFi', 'ssid', self.builder.get_object('ssidEntry').get())
+        self.config_manager.set_setting('WiFi', 'psk', self.builder.get_object('pskEntry').get())
+        self.config_manager.set_setting('Settings', 'quit_after_completion', str(self.quit_var.get()))
+        self.config_manager.set_setting('Settings', 'import_oscar', str(self.import_oscar_var.get()))
+
     def start_process(self, event=None):
-        self.is_running = True
-        start_process(self, event)
+        self.callbacks.start_process(event)
 
     def cancel_process(self, event=None):
-        cancel_process(self, event)
+        self.callbacks.cancel_process(event)
 
     def quit_application(self, event=None):
-        quit_application(self, event)
+        self.callbacks.quit_application(event)
 
     def open_oscar_download_page(self, event=None):
-        open_oscar_download_page(self, event)
-
-    def load_config_ui(self, event=None):
-        load_config_ui(self)
-
-    def save_config(self, event=None):
-        save_config(self, event)
+        self.callbacks.open_oscar_download_page(event)
 
     def restore_defaults(self, event=None):
-        restore_defaults(self, event)
+        self.callbacks.restore_defaults(event)
 
     def import_cpap_data_with_oscar(self, event=None):
-        import_cpap_data_with_oscar(self, event)
+        self.callbacks.import_cpap_data_with_oscar(event)
 
     def ez_share_config(self, event=None):
-        ez_share_config(self, event)
+        self.ezshare_config.configure_ezshare(event)
 
 if __name__ == "__main__":
     app = EzShareCPAPUI()

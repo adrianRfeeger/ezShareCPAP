@@ -1,5 +1,5 @@
 import threading
-from wifi import connect_to_wifi, disconnect_from_wifi
+from wifi_utils import connect_to_wifi, disconnect_from_wifi
 
 class EzShareWorker(threading.Thread):
     def __init__(self, ezshare, queue):
