@@ -2,7 +2,7 @@ import subprocess
 import requests
 import time
 from tkinter import messagebox
-from wifi_utils import connect_to_wifi, reconnect_to_original_wifi, wifi_connected
+from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected
 
 class EzShareConfig:
     def __init__(self, app):
@@ -41,11 +41,8 @@ class EzShareConfig:
                             subprocess.run(['open', 'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'])
                             messagebox.showinfo('Reconnect to Original Wi-Fi', 'Once configuration is complete click OK to reconnect to your original Wi-Fi network.')
                             self.app.update_status('Reconnecting to original Wi-Fi...', 'info')
-                            success = reconnect_to_original_wifi(self.app.ezshare)
-                            if success:
-                                self.app.update_status('Reconnected to original Wi-Fi.', 'info')
-                            else:
-                                self.app.update_status('Failed to reconnect to original Wi-Fi. Please do so manually.', 'error')
+                            disconnect_from_wifi(self.app.ezshare)  # Disconnect from ez Share Wi-Fi
+                            self.app.update_status('Reconnected to original Wi-Fi.', 'info')
                             self.app.callbacks.cancel_process()  # Call cancel_process after configuration
                         else:
                             self.app.update_status(f'Failed to reach the HTTP server. Status code: {response.status_code}', 'error')

@@ -6,10 +6,7 @@ logger = logging.getLogger(__name__)
 def get_interface_name():
     get_interface_cmd = 'networksetup -listallhardwareports'
     try:
-        get_interface_result = subprocess.run(get_interface_cmd,
-                                              shell=True,
-                                              capture_output=True,
-                                              text=True, check=True)
+        get_interface_result = subprocess.run(get_interface_cmd, shell=True, capture_output=True, text=True, check=True)
         interface_lines = get_interface_result.stdout.split('\n')
         for index, line in enumerate(interface_lines):
             if 'Wi-Fi' in line:
@@ -22,9 +19,7 @@ def connect_to_wifi(ezshare):
     interface_name = get_interface_name()
     connect_cmd = f'networksetup -setairportnetwork {interface_name} "{ezshare.ssid}" "{ezshare.psk}"'
     try:
-        connect_result = subprocess.run(connect_cmd, shell=True,
-                                        capture_output=True,
-                                        text=True, check=True)
+        connect_result = subprocess.run(connect_cmd, shell=True, capture_output=True, text=True, check=True)
         if 'Failed' in connect_result.stdout:
             raise RuntimeError(f'Error connecting to {ezshare.ssid}. Error: {connect_result.stdout}')
         ezshare.connection_id = ezshare.ssid
@@ -40,31 +35,11 @@ def disconnect_from_wifi(ezshare):
         ezshare.print(f'Disconnecting from {ezshare.connection_id}...')
         profile_cmd = f'networksetup -removepreferredwirelessnetwork {ezshare.interface_name} "{ezshare.connection_id}"'
         try:
-            subprocess.run(profile_cmd, shell=True,
-                           capture_output=True, text=True, check=True)
-            subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} off',
-                           shell=True, check=True)
-            subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} on',
-                           shell=True, check=True)
+            subprocess.run(profile_cmd, shell=True, capture_output=True, text=True, check=True)
+            subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} off', shell=True, check=True)
+            subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} on', shell=True, check=True)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f'Error toggling Wi-Fi interface power. Return code: {e.returncode}, error: {e.stderr}') from e
         finally:
             ezshare.connected = False
             ezshare.connection_id = None
-
-def reconnect_to_original_wifi(ezshare):
-    if ezshare.previous_ssid and ezshare.previous_psk:
-        try:
-            connect_cmd = f'networksetup -setairportnetwork {ezshare.interface_name} "{ezshare.previous_ssid}" "{ezshare.previous_psk}"'
-            connect_result = subprocess.run(connect_cmd, shell=True,
-                                            capture_output=True,
-                                            text=True, check=True)
-            if 'Failed' in connect_result.stdout:
-                raise RuntimeError(f'Error reconnecting to {ezshare.previous_ssid}. Error: {connect_result.stdout}')
-            return True
-        except subprocess.CalledProcessError as e:
-            ezshare.print(f'Error reconnecting to {ezshare.previous_ssid}. Return code: {e.returncode}, error: {e.stderr}')
-            return False
-    else:
-        ezshare.print('No previous Wi-Fi credentials stored.')
-        return False

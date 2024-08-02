@@ -2,12 +2,13 @@ import pathlib
 import tkinter as tk
 import queue
 import pygubu
-from tkinter import BooleanVar
+from tkinter import BooleanVar, messagebox
 from ezshare import EzShare
 from utils import ensure_disk_access
 from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
+import logging
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -36,6 +37,8 @@ class EzShareCPAPUI:
         self.load_config()
         self.callbacks.update_checkboxes()
         ensure_disk_access(self.config_manager.get_setting('Settings', 'path'), self)
+        
+        logging.basicConfig(filename='application.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def update_status(self, message, message_type='info'):
         current_status = self.builder.get_object('statusLabel')['text']
@@ -43,8 +46,11 @@ class EzShareCPAPUI:
             self.builder.get_object('statusLabel')['text'] = message
             if message_type == 'error':
                 self.builder.get_object('statusLabel')['foreground'] = 'red'
+                logging.error(message)
+                messagebox.showerror("Error", message)
             else:
                 self.builder.get_object('statusLabel').config(foreground='')
+                logging.info(message)
             if message_type == 'info' and message != 'Ready.':
                 self.status_timer = self.mainwindow.after(5000, self.reset_status)
 

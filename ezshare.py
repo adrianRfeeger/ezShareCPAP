@@ -19,8 +19,6 @@ class EzShare:
         self.keep_old = None
         self.ssid = None
         self.psk = None
-        self.previous_ssid = None
-        self.previous_psk = None
         self.connection_id = None
         self.interface_name = get_interface_name()
         self.connected = False
@@ -51,7 +49,6 @@ class EzShare:
         self.keep_old = keep_old
         self.ssid = ssid
         self.psk = psk
-        self.previous_ssid = self.get_current_ssid()
         self.ignore = ['.', '..', 'back to photo'] + ignore
         self.retries = retries
         self.retry = Retry(total=retries, backoff_factor=0.25)
@@ -77,9 +74,9 @@ class EzShare:
         if self.progress_callback:
             self.progress_callback(min(max(0, value), 100))
 
-    def update_status(self, message):
+    def update_status(self, message, message_type='info'):
         if self.status_callback:
-            self.status_callback(message)
+            self.status_callback(message, message_type)
 
     def print(self, message):
         if self.show_progress:
@@ -96,7 +93,7 @@ class EzShare:
                     connect_to_wifi(self)
                     self.update_status(f'Connected to {self.ssid}.')
                 except RuntimeError as e:
-                    self.update_status(f'Failed to connect to {self.ssid}.')
+                    self.update_status(f'Failed to connect to {self.ssid}.', 'error')
                     logging.warning('Failed to connect to %s. Error: %s', self.ssid, str(e))
                     return
 
@@ -104,7 +101,7 @@ class EzShare:
                 time.sleep(self.connection_delay)
 
             if not wifi_connected(self):
-                self.update_status('Unable to connect automatically, please connect manually.')
+                self.update_status('Unable to connect automatically, please connect manually.', 'error')
                 logging.warning('No Wi-Fi connection was established. Attempting to continue...')
                 return
 
@@ -123,7 +120,7 @@ class EzShare:
             self.processed_files = recursive_traversal(self, self.url, self.path, self.total_files, self.processed_files)
             self.update_status('File transfer completed.')
         finally:
-            self.disconnect_from_wifi()
+            disconnect_from_wifi(self)
             self.update_status('Disconnected from Wi-Fi.')
 
     def calculate_total_files(self, url, dir_path, overwrite):
