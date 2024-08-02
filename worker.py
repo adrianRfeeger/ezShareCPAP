@@ -27,6 +27,7 @@ class EzShareWorker(threading.Thread):
 
     def stop(self):
         self._is_running = False
+        self.ezshare.stop()
         self.queue.put(('stop',))
         self._cleanup()
 

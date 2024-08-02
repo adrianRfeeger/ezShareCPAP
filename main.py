@@ -1,3 +1,4 @@
+# main.py
 import pathlib
 import tkinter as tk
 import queue

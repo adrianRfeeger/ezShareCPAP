@@ -6,6 +6,7 @@ import subprocess
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status
+from wifi_utils import disconnect_from_wifi  # Correct import for disconnect function
 
 class Callbacks:
     def __init__(self, app):
@@ -88,8 +89,7 @@ class Callbacks:
         self.app.is_running = False
         self.app.enable_ui_elements()
         self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
-        if self.app.ezshare:
-            self.app.ezshare.disconnect_from_wifi()
+        disconnect_from_wifi(self.app.ezshare)  # Corrected call to the utility function
         update_status(self.app, 'Ready.', 'info')  # Ensure the status is updated to Ready
 
     def quit_application(self, event=None):
