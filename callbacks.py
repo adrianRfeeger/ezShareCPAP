@@ -3,7 +3,7 @@ import webbrowser
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
-from utils import check_oscar_installed, ensure_directory_exists_and_writable
+from utils import check_oscar_installed, ensure_directory_exists_and_writable, update_status
 
 class Callbacks:
     def __init__(self, app):
@@ -17,12 +17,12 @@ class Callbacks:
         psk = self.app.builder.get_object('pskEntry').get()
 
         if not path or not url or not ssid:
-            self.app.update_status('Input Error: All fields must be filled out.', 'error')
+            update_status(self.app, 'Input Error: All fields must be filled out.', 'error')
             return
 
         expanded_path = pathlib.Path(path).expanduser()
         if not ensure_directory_exists_and_writable(expanded_path):
-            self.app.update_status('Invalid Path: The specified path does not exist or is not writable.', 'error')
+            update_status(self.app, 'Invalid Path: The specified path does not exist or is not writable.', 'error')
             return
 
         self.app.config_manager.set_setting('Settings', 'path', str(expanded_path))
@@ -62,7 +62,7 @@ class Callbacks:
             self.app.worker.stop()
             self.app.worker.join()
             self.app.builder.get_object('progressBar')['value'] = 0
-            self.app.update_status('Process cancelled.', 'info')
+            update_status(self.app, 'Process cancelled.', 'info')
         self.app.is_running = False
         self.app.enable_ui_elements()
         if self.app.ezshare:
@@ -86,7 +86,7 @@ class Callbacks:
     def restore_defaults(self, event=None):
         self.app.config_manager.restore_defaults()
         self.app.load_config()
-        self.app.update_status('Settings have been restored to defaults.', 'info')
+        update_status(self.app, 'Settings have been restored to defaults.', 'info')
 
     def update_checkboxes(self):
         oscar_installed = check_oscar_installed()
@@ -100,7 +100,7 @@ class Callbacks:
     def close_event_handler(self, event=None):  # Updated to accept the event argument
         if self.app.worker and self.app.worker.is_alive():
             self.cancel_process()
-        self.app.update_status('Ready.', 'info')
+        update_status(self.app, 'Ready.', 'info')
         self.app.builder.get_object('progressBar')['value'] = 0
         self.app.mainwindow.quit()
 
@@ -119,4 +119,4 @@ class Callbacks:
         try:
             subprocess.run(["osascript", "-e", script], check=True)
         except subprocess.CalledProcessError as e:
-            self.app.update_status(f"Error importing CPAP data with OSCAR: {e}", 'error')
+            update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')

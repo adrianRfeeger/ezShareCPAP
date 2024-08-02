@@ -4,7 +4,7 @@ import queue
 import pygubu
 from tkinter import BooleanVar, messagebox
 from ezshare import EzShare
-from utils import ensure_disk_access
+from utils import ensure_disk_access, update_status, disable_ui_elements, enable_ui_elements
 from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
@@ -41,38 +41,17 @@ class EzShareCPAPUI:
         logging.basicConfig(filename='application.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def update_status(self, message, message_type='info'):
-        current_status = self.builder.get_object('statusLabel')['text']
-        if message != current_status:
-            self.builder.get_object('statusLabel')['text'] = message
-            if message_type == 'error':
-                self.builder.get_object('statusLabel')['foreground'] = 'red'
-                logging.error(message)
-                messagebox.showerror("Error", message)
-            else:
-                self.builder.get_object('statusLabel').config(foreground='')
-                logging.info(message)
-            if message_type == 'info' and message != 'Ready.':
-                self.status_timer = self.mainwindow.after(5000, self.reset_status)
+        update_status(self, message, message_type)
 
     def reset_status(self):
         if not self.is_running:
             self.update_status('Ready.', 'info')
 
     def disable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.DISABLED)
-        self.builder.get_object('startButton').config(state=tk.DISABLED)
-        self.builder.get_object('saveButton').config(state=tk.DISABLED)
-        self.builder.get_object('restoreButton').config(state=tk.DISABLED)
-        self.builder.get_object('quitButton').config(state=tk.DISABLED)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
+        disable_ui_elements(self)
 
     def enable_ui_elements(self):
-        self.builder.get_object('path').config(state=tk.NORMAL)
-        self.builder.get_object('startButton').config(state=tk.NORMAL)
-        self.builder.get_object('saveButton').config(state=tk.NORMAL)
-        self.builder.get_object('restoreButton').config(state=tk.NORMAL)
-        self.builder.get_object('quitButton').config(state=tk.NORMAL)
-        self.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
+        enable_ui_elements(self)
 
     def process_worker_queue(self):
         try:
