@@ -1,4 +1,3 @@
-# wifi_utils.py
 import subprocess
 import logging
 

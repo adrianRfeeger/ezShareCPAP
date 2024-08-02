@@ -1,4 +1,3 @@
-# status_manager.py
 import logging
 from tkinter import messagebox
 

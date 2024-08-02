@@ -3,7 +3,7 @@ import webbrowser
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
-from utils import check_oscar_installed, ensure_directory_exists_and_writable
+from utils import ensure_and_check_disk_access, check_oscar_installed
 from status_manager import update_status
 
 class Callbacks:
@@ -27,7 +27,7 @@ class Callbacks:
             return
 
         expanded_path = pathlib.Path(path).expanduser()
-        if not ensure_directory_exists_and_writable(expanded_path):
+        if not ensure_and_check_disk_access(expanded_path, self.app):
             update_status(self.app, 'Invalid Path: The specified path does not exist or is not writable.', 'error')
             return
 

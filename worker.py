@@ -1,4 +1,3 @@
-# worker.py
 import threading
 from wifi_utils import connect_to_wifi, disconnect_from_wifi
 

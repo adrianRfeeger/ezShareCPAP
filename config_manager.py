@@ -1,4 +1,3 @@
-# config_manager.py
 import os
 import configparser
 import logging

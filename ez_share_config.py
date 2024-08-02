@@ -1,4 +1,3 @@
-# ez_share_config.py
 import subprocess
 import requests
 import time

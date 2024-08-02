@@ -1,7 +1,7 @@
-# main.py
 import pathlib
 import tkinter as tk
 import queue
+import logging
 import pygubu
 from tkinter import BooleanVar
 from ezshare import ezshare
@@ -9,7 +9,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-import logging
+from utils import ensure_and_check_disk_access
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -148,12 +148,8 @@ class EzShareCPAPUI:
         self.ezshare_config.configure_ezshare(event)
 
     def ensure_disk_access(self, directory):
-        expanded_directory = pathlib.Path(directory).expanduser()
-        if not expanded_directory.exists():
-            try:
-                expanded_directory.mkdir(parents=True)
-            except PermissionError:
-                self.request_disk_access()
+        if not ensure_and_check_disk_access(directory, self):
+            self.request_disk_access()
 
     def request_disk_access(self):
         options = {'initialdir': '/'}
