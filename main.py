@@ -9,7 +9,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access
+from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -41,28 +41,20 @@ class EzShareCPAPUI:
         
         logging.basicConfig(filename='application.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+    def disable_ui_elements(self):
+        disable_ui_elements(self.builder)
+        self.builder.get_object('cancel_button').config(default=tk.ACTIVE)
+
+    def enable_ui_elements(self):
+        enable_ui_elements(self.builder)
+        self.builder.get_object('cancel_button').config(default=tk.NORMAL)
+
     def update_status(self, message, message_type='info'):
         update_status(self, message, message_type)
 
     def reset_status(self):
         if not self.is_running:
             self.update_status('Ready.', 'info')
-
-    def disable_ui_elements(self):
-        self.builder.get_object('local_directory_path').config(state=tk.DISABLED)
-        self.builder.get_object('start_button').config(state=tk.DISABLED)
-        self.builder.get_object('save_button').config(state=tk.DISABLED)
-        self.builder.get_object('restore_defaults_button').config(state=tk.DISABLED)
-        self.builder.get_object('quit_button').config(state=tk.DISABLED)
-        self.builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
-
-    def enable_ui_elements(self):
-        self.builder.get_object('local_directory_path').config(state=tk.NORMAL)
-        self.builder.get_object('start_button').config(state=tk.NORMAL)
-        self.builder.get_object('save_button').config(state=tk.NORMAL)
-        self.builder.get_object('restore_defaults_button').config(state=tk.NORMAL)
-        self.builder.get_object('quit_button').config(state=tk.NORMAL)
-        self.builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
 
     def process_worker_queue(self):
         try:

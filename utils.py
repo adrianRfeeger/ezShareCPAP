@@ -76,18 +76,30 @@ def retry(func, retries=3, delay=1, backoff=2):
             else:
                 raise e
 
-def disable_ui_elements(app):
-    app.builder.get_object('path').config(state=tk.DISABLED)
-    app.builder.get_object('startButton').config(state=tk.DISABLED)
-    app.builder.get_object('saveButton').config(state=tk.DISABLED)
-    app.builder.get_object('restoreButton').config(state=tk.DISABLED)
-    app.builder.get_object('quitButton').config(state=tk.DISABLED)
-    app.builder.get_object('ezShareConfigBtn').config(state=tk.DISABLED)
+def disable_ui_elements(builder):
+    try:
+        builder.get_object('local_directory_path').config(state=tk.DISABLED)
+        builder.get_object('url_entry').config(state=tk.DISABLED)
+        builder.get_object('ssid_entry').config(state=tk.DISABLED)
+        builder.get_object('psk_entry').config(state=tk.DISABLED)
+        builder.get_object('start_button').config(state=tk.DISABLED)
+        builder.get_object('save_button').config(state=tk.DISABLED)
+        builder.get_object('restore_defaults_button').config(state=tk.DISABLED)
+        builder.get_object('quit_button').config(state=tk.DISABLED)
+        builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
+    except Exception as e:
+        raise Exception(f"Widget not defined: {e}")
 
-def enable_ui_elements(app):
-    app.builder.get_object('path').config(state=tk.NORMAL)
-    app.builder.get_object('startButton').config(state=tk.NORMAL)
-    app.builder.get_object('saveButton').config(state=tk.NORMAL)
-    app.builder.get_object('restoreButton').config(state=tk.NORMAL)
-    app.builder.get_object('quitButton').config(state=tk.NORMAL)
-    app.builder.get_object('ezShareConfigBtn').config(state=tk.NORMAL)
+def enable_ui_elements(builder):
+    try:
+        builder.get_object('local_directory_path').config(state=tk.NORMAL)
+        builder.get_object('url_entry').config(state=tk.NORMAL)
+        builder.get_object('ssid_entry').config(state=tk.NORMAL)
+        builder.get_object('psk_entry').config(state=tk.NORMAL)
+        builder.get_object('start_button').config(state=tk.NORMAL)
+        builder.get_object('save_button').config(state=tk.NORMAL)
+        builder.get_object('restore_defaults_button').config(state=tk.NORMAL)
+        builder.get_object('quit_button').config(state=tk.NORMAL)
+        builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
+    except Exception as e:
+        raise Exception(f"Widget not defined: {e}")

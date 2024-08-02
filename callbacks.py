@@ -3,7 +3,7 @@ import webbrowser
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
-from utils import ensure_and_check_disk_access, check_oscar_installed
+from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status
 
 class Callbacks:
