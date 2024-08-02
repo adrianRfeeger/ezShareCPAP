@@ -53,7 +53,7 @@ class EzShareConfig:
             if response.status_code == 200:
                 update_status(self.app, 'HTTP server is reachable. Opening the configuration page...', 'info')
                 subprocess.run(['open', 'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'])
-                messagebox.showinfo('Reconnect to Original Wi-Fi', 'Once configuration is complete click OK to reconnect to your original Wi-Fi network.')
+                messagebox.showinfo('Reconnect to Original Wi-Fi', 'Once configuration is complete click OK to disconnect from the ez Share card Wifi and reconnect to your original WiFi network.')
                 update_status(self.app, 'Reconnecting to original Wi-Fi...', 'info')
                 disconnect_from_wifi(self.app.ezshare)
                 update_status(self.app, 'Reconnected to original Wi-Fi.', 'info')
