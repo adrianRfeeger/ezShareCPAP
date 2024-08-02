@@ -8,7 +8,7 @@ from urllib3.util import Retry
 from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
 
-class ezshare:
+class ezShare:
     def __init__(self):
         self.path = None
         self.url = None

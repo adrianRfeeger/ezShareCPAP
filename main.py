@@ -4,7 +4,7 @@ import queue
 import logging
 import pygubu
 from tkinter import BooleanVar
-from ezshare import ezshare
+from ezshare import ezShare
 from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
@@ -15,7 +15,7 @@ class EzShareCPAPUI:
     def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config_manager = ConfigManager(self.config_file)
-        self.ezshare = ezshare()
+        self.ezshare = ezShare()
         self.worker = None
         self.worker_queue = queue.Queue()
         self.is_running = False
