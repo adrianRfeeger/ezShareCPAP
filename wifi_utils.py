@@ -1,3 +1,4 @@
+# wifi_utils.py
 import subprocess
 import logging
 
@@ -10,10 +11,20 @@ def get_interface_name():
         interface_lines = get_interface_result.stdout.split('\n')
         for index, line in enumerate(interface_lines):
             if 'Wi-Fi' in line:
-                return interface_lines[index + 1].split(':')[1].strip()
+                if index + 1 < len(interface_lines):
+                    next_line_parts = interface_lines[index + 1].split(':')
+                    if len(next_line_parts) == 2:
+                        return next_line_parts[1].strip()
+                    else:
+                        raise ValueError(f"Unexpected format for hardware ports: {interface_lines[index + 1]}")
+                else:
+                    raise ValueError("No corresponding interface name found for Wi-Fi")
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f'Error getting Wi-Fi interface name. Return code: {e.returncode}, error: {e.stderr}') from e
+    except ValueError as ve:
+        raise RuntimeError(f'Error parsing Wi-Fi interface name: {ve}') from ve
     raise RuntimeError('No Wi-Fi interface found')
+
 
 def connect_to_wifi(ezshare):
     interface_name = get_interface_name()

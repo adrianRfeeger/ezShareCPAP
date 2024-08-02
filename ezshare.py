@@ -8,7 +8,7 @@ from urllib3.util import Retry
 from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected, get_interface_name
 from file_ops import recursive_traversal, list_dir
 
-class EzShare:
+class ezshare:
     def __init__(self):
         self.path = None
         self.url = None
@@ -22,7 +22,7 @@ class EzShare:
         self.interface_name = get_interface_name()
         self.connected = False
         self.session = requests.Session()
-        self.ignore = None
+        self.ignore = ['.', '..', 'back to photo']
         self.retries = None
         self.retry = None
         self.connection_delay = None
@@ -125,12 +125,3 @@ class EzShare:
             absolute_dir_url = urllib.parse.urljoin(url, dir_url)
             total_files += self.calculate_total_files(absolute_dir_url, new_dir_path, overwrite)
         return total_files
-
-    def disconnect_from_wifi(self):
-        try:
-            disconnect_from_wifi(self)
-        except RuntimeError as e:
-            logging.error(f'Error disconnecting from Wi-Fi: {e}')
-        finally:
-            self.connected = False
-            self.connection_id = None

@@ -1,5 +1,7 @@
+# config_manager.py
 import os
 import configparser
+import logging
 
 DEFAULT_CONFIG = {
     'Settings': {
@@ -46,7 +48,7 @@ class ConfigManager:
             with open(self.config_file, 'w') as configfile:
                 self.config.write(configfile)
         except IOError as e:
-            print(f"Error saving config file: {e}")
+            logging.error(f"Error saving config file: {e}")
 
     def restore_defaults(self):
         self.config.read_dict(DEFAULT_CONFIG)

@@ -10,6 +10,11 @@ class Callbacks:
     def __init__(self, app):
         self.app = app
 
+    def _set_config(self, settings):
+        for section, items in settings.items():
+            for key, value in items.items():
+                self.app.config_manager.set_setting(section, key, value)
+
     def start_process(self, event=None):
         pathchooser = self.app.builder.get_object('local_directory_path')
         path = pathchooser.cget('path')
@@ -26,11 +31,11 @@ class Callbacks:
             update_status(self.app, 'Invalid Path: The specified path does not exist or is not writable.', 'error')
             return
 
-        self.app.config_manager.set_setting('Settings', 'path', str(expanded_path))
-        self.app.config_manager.set_setting('Settings', 'url', url)
-        self.app.config_manager.set_setting('WiFi', 'ssid', ssid)
-        self.app.config_manager.set_setting('WiFi', 'psk', psk)
-        self.app.config_manager.set_setting('Settings', 'quit_after_completion', str(self.app.quit_var.get()))
+        settings = {
+            'Settings': {'path': str(expanded_path), 'url': url, 'quit_after_completion': str(self.app.quit_var.get())},
+            'WiFi': {'ssid': ssid, 'psk': psk}
+        }
+        self._set_config(settings)
 
         self.app.ezshare.set_params(
             path=expanded_path,
@@ -78,10 +83,10 @@ class Callbacks:
     def open_oscar_download_page(self, event=None):
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
-    def load_config_ui(self, event=None):  # Updated to accept the event argument
+    def load_config_ui(self, event=None):
         self.app.load_config()
 
-    def save_config(self, event=None):  # Updated to accept the event argument
+    def save_config(self, event=None):
         self.app.save_config(event)
 
     def restore_defaults(self, event=None):
@@ -98,14 +103,14 @@ class Callbacks:
         else:
             self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
 
-    def close_event_handler(self, event=None):  # Updated to accept the event argument
+    def close_event_handler(self, event=None):
         if self.app.worker and self.app.worker.is_alive():
             self.cancel_process()
         update_status(self.app, 'Ready.', 'info')
         self.app.builder.get_object('progress_bar')['value'] = 0
         self.app.main_window.quit()
 
-    def import_cpap_data_with_oscar(self, event=None):  # Updated to accept the event argument
+    def import_cpap_data_with_oscar(self, event=None):
         script = '''
         tell application "OSCAR"
             activate

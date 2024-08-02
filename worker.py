@@ -1,6 +1,6 @@
+# worker.py
 import threading
 from wifi_utils import connect_to_wifi, disconnect_from_wifi
-from utils import update_status
 
 class EzShareWorker(threading.Thread):
     def __init__(self, ezshare, queue):
@@ -18,8 +18,7 @@ class EzShareWorker(threading.Thread):
         except RuntimeError as e:
             self.update_status(f'Error: {e}', 'error')
         finally:
-            disconnect_from_wifi(self.ezshare)
-            self.queue.put(('finished',))
+            self._cleanup()
 
     def update_progress(self, value):
         self.queue.put(('progress', min(max(0, value), 100)))
@@ -30,4 +29,9 @@ class EzShareWorker(threading.Thread):
     def stop(self):
         self._is_running = False
         self.queue.put(('stop',))
-        disconnect_from_wifi(self.ezshare)
+        self._cleanup()
+
+    def _cleanup(self):
+        if self.ezshare.connected:
+            disconnect_from_wifi(self.ezshare)
+        self.queue.put(('finished',))

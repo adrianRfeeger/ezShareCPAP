@@ -5,6 +5,7 @@ import time
 import logging
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from status_manager import update_status, set_status_colour, log_status
 
 def resource_path(relative_path):
     try:
@@ -69,20 +70,6 @@ def ensure_directory_exists_and_writable(path):
     except Exception as e:
         print(f"Error ensuring directory exists and is writable: {e}")
         return False
-
-def update_status(app, message, message_type='info'):
-    current_status = app.builder.get_object('statusLabel')['text']
-    if message != current_status:
-        app.builder.get_object('statusLabel')['text'] = message
-        if message_type == 'error':
-            app.builder.get_object('statusLabel')['foreground'] = 'red'
-            logging.error(message)
-            messagebox.showerror("Error", message)
-        else:
-            app.builder.get_object('statusLabel').config(foreground='')
-            logging.info(message)
-        if message_type == 'info' and message != 'Ready.':
-            app.status_timer = app.mainwindow.after(5000, app.reset_status)
 
 def disable_ui_elements(app):
     app.builder.get_object('path').config(state=tk.DISABLED)

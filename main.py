@@ -1,9 +1,10 @@
+# main.py
 import pathlib
 import tkinter as tk
 import queue
 import pygubu
-from tkinter import BooleanVar, messagebox
-from ezshare import EzShare
+from tkinter import BooleanVar
+from ezshare import ezshare
 from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
@@ -14,7 +15,7 @@ class EzShareCPAPUI:
     def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config_manager = ConfigManager(self.config_file)
-        self.ezshare = EzShare()
+        self.ezshare = ezshare()
         self.worker = None
         self.worker_queue = queue.Queue()
         self.is_running = False
@@ -92,13 +93,19 @@ class EzShareCPAPUI:
         self.main_window.mainloop()
 
     def load_config(self):
-        self.config_manager.load_config()
-        self.apply_config_to_ui()
+        try:
+            self.config_manager.load_config()
+            self.apply_config_to_ui()
+        except Exception as e:
+            logging.error(f"Error loading config: {e}")
 
-    def save_config(self, event=None):  # Updated to accept the event argument
-        self.apply_ui_to_config()
-        self.config_manager.save_config()
-        self.update_status('Settings have been saved.', 'info')
+    def save_config(self, event=None):
+        try:
+            self.apply_ui_to_config()
+            self.config_manager.save_config()
+            self.update_status('Settings have been saved.', 'info')
+        except Exception as e:
+            logging.error(f"Error saving config: {e}")
 
     def apply_config_to_ui(self):
         self.builder.get_object("local_directory_path").configure(path=self.config_manager.get_setting('Settings', 'path'))
