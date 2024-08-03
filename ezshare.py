@@ -1,6 +1,7 @@
 import pathlib
 import logging
 import requests
+import urllib
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected
@@ -91,6 +92,18 @@ class ezShare:
 
         disconnect_from_wifi(self)
         self.update_status('Disconnected from Wi-Fi.')
+    def calculate_total_files(self, url, dir_path, overwrite):
+        total_files = 0
+        files, dirs = list_dir(self, url)
+        for filename, file_url, file_ts in files:
+            local_path = dir_path / filename
+            if overwrite or not local_path.is_file() or local_path.stat().st_mtime < file_ts:
+                total_files += 1
+        for dirname, dir_url in dirs:
+            new_dir_path = dir_path / dirname
+            absolute_dir_url = urllib.parse.urljoin(url, dir_url)
+            total_files += self.calculate_total_files(absolute_dir_url, new_dir_path, overwrite)
+        return total_files
 
     def run_after_connection_delay(self):
         if not wifi_connected(self):
