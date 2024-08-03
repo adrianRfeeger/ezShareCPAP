@@ -9,7 +9,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements
+from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements, resource_path
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -26,6 +26,9 @@ class EzShareCPAPUI:
         self.main_window = self.builder.get_object('main_window', master)
         self.builder.connect_callbacks(self)
 
+        icon_path = resource_path('icon.png')
+        self.main_window.iconphoto(False, tk.PhotoImage(file=icon_path))
+
         self.quit_var = BooleanVar()
         self.import_oscar_var = BooleanVar()
 
@@ -37,7 +40,7 @@ class EzShareCPAPUI:
 
         self.load_config()
         self.callbacks.update_checkboxes()
-        self.ensure_disk_access(self.config_manager.get_setting('Settings', 'path'))
+        ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -149,20 +152,6 @@ class EzShareCPAPUI:
     def ez_share_config(self, event=None):
         self.is_running = True
         self.ezshare_config.configure_ezshare(event)
-
-    def ensure_disk_access(self, directory):
-        if not ensure_and_check_disk_access(directory, self):
-            self.request_disk_access()
-
-    def request_disk_access(self):
-        options = {'initialdir': '/'}
-        directory = tk.filedialog.askdirectory(**options)
-        if directory:
-            self.config_manager.set_setting('Settings', 'path', directory)
-            self.save_config()
-            print(f"Directory selected: {directory}")
-        else:
-            print("No directory selected")
 
 if __name__ == "__main__":
     app = EzShareCPAPUI()
