@@ -31,8 +31,8 @@ class ezShare:
         self.processed_files = 0
         self._is_running = True
         self._configure_logging()
-        # Initialize the retry policy
         self.retry_policy = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
 
     def _configure_logging(self):
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -53,8 +53,6 @@ class ezShare:
         self.retries = retries
         self.connection_delay = connection_delay
         self.debug = debug
-        # Mount the HTTP adapter with retry policy
-        self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
@@ -92,6 +90,7 @@ class ezShare:
 
         disconnect_from_wifi(self)
         self.update_status('Disconnected from Wi-Fi.')
+
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
         files, dirs = list_dir(self, url)

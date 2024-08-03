@@ -1,4 +1,3 @@
-# main.py
 import pathlib
 import tkinter as tk
 import queue
@@ -43,28 +42,12 @@ class EzShareCPAPUI:
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def disable_ui_elements(self):
-        self.callbacks.start_button_active = False
-        self.callbacks.cancel_button_active = True
-        self.callbacks.quit_button_active = False
-        self.callbacks.open_oscar_button_active = False
-        self.callbacks.load_config_button_active = False
-        self.callbacks.save_button_active = False
-        self.callbacks.restore_defaults_button_active = False
-        self.callbacks.import_oscar_button_active = False
-
+        self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
         disable_ui_elements(self.builder)
         self.builder.get_object('cancel_button').config(default=tk.ACTIVE)
 
     def enable_ui_elements(self):
-        self.callbacks.start_button_active = True
-        self.callbacks.cancel_button_active = True
-        self.callbacks.quit_button_active = True
-        self.callbacks.open_oscar_button_active = True
-        self.callbacks.load_config_button_active = True
-        self.callbacks.save_button_active = True
-        self.callbacks.restore_defaults_button_active = True
-        self.callbacks.import_oscar_button_active = True
-
+        self.callbacks.buttons_active = {key: True for key in self.callbacks.buttons_active}
         enable_ui_elements(self.builder)
         self.builder.get_object('cancel_button').config(default=tk.NORMAL)
 
@@ -116,7 +99,7 @@ class EzShareCPAPUI:
             logging.error(f"Error loading config: {e}")
 
     def save_config(self, event=None):
-        if not self.callbacks.save_button_active:
+        if not self.callbacks.buttons_active['save']:
             return
         try:
             self.apply_ui_to_config()

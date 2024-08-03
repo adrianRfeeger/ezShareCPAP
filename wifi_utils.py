@@ -63,6 +63,5 @@ def disconnect_from_wifi(ezshare):
 
     logger.info("Disconnected successfully from Wi-Fi.")
 
-
 def wifi_connected(ezshare):
     return ezshare.connected
