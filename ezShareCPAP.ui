@@ -463,6 +463,7 @@
         <child>
           <object class="ttk.Treeview" id="folder_select" named="True">
             <property name="selectmode">extended</property>
+            <property name="show">headings</property>
             <layout manager="pack">
               <property name="expand">true</property>
               <property name="fill">both</property>
@@ -480,6 +481,7 @@
             <child>
               <object class="ttk.Button" id="cancelButton" named="True">
                 <property name="text" translatable="yes">Cancel</property>
+                <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_folder_selection" add="" />
                 <layout manager="pack">
                   <property name="side">left</property>
                 </layout>
@@ -488,6 +490,7 @@
             <child>
               <object class="ttk.Button" id="OKbutton" named="True">
                 <property name="text" translatable="yes">OK</property>
+                <bind sequence="&lt;ButtonRelease&gt;" handler="confirm_selection" add="" />
                 <layout manager="pack">
                   <property name="side">left</property>
                 </layout>

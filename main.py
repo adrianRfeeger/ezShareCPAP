@@ -10,6 +10,7 @@ from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
 from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements, resource_path
+from folder_selector import FolderSelector  # Ensure FolderSelector is imported
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -24,6 +25,9 @@ class EzShareCPAPUI:
         self.builder = pygubu.Builder()
         self.builder.add_from_file('ezsharecpap.ui')
         self.main_window = self.builder.get_object('main_window', master)
+        self.folder_selector_window = self.builder.get_object('folder_selector_window', master)  # Initialize the folder_selector_window
+        self.folder_selector_window.withdraw()  # Hide the folder selector window initially
+
         self.builder.connect_callbacks(self)
 
         icon_path = resource_path('icon.png')
@@ -37,13 +41,13 @@ class EzShareCPAPUI:
 
         self.callbacks = Callbacks(self)
         self.ezshare_config = EzShareConfig(self)
+        self.folder_selector = FolderSelector(self)  # Initialize the FolderSelector
 
         self.load_config()
         self.callbacks.update_checkboxes()
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
     def disable_ui_elements(self):
         self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
@@ -148,7 +152,12 @@ class EzShareCPAPUI:
         self.callbacks.restore_defaults(event)
     
     def open_folder_selector(self, event=None):
-        self.callbacks.open_folder_selector(event)
+        # Ensure URL is set before opening folder selector
+        self.ezshare.url = self.builder.get_object('url_entry').get()
+        if not self.ezshare.url:
+            self.update_status("URL is not set. Please set the URL and try again.", "error")
+            return
+        self.folder_selector.open_folder_selector()
 
     def import_cpap_data_with_oscar(self, event=None):
         self.callbacks.import_cpap_data_with_oscar(event)

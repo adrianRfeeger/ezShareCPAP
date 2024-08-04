@@ -1,3 +1,4 @@
+# ez_share_config.py
 import threading
 import tkinter as tk
 import requests
