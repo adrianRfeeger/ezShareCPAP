@@ -147,6 +147,11 @@ class Callbacks:
         update_status(self.app, 'Ready.', 'info')
         self.app.builder.get_object('progress_bar')['value'] = 0
         self.app.main_window.quit()
+    
+    def open_folder_selector(self, event=None):
+        # Access the folder selector window defined in Pygubu and show it
+        folder_selector_window = self.app.builder.get_object('folder_selector_window')
+        folder_selector_window.deiconify()  # Make sure to show the window if it was previously hidden
 
     def import_cpap_data_with_oscar(self, event=None):
         if not self.buttons_active['import_oscar']:

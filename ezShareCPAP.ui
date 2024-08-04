@@ -95,6 +95,15 @@
                 </layout>
               </object>
             </child>
+            <child>
+              <object class="ttk.Button" id="folderselectorButton" named="True">
+                <property name="text" translatable="yes">Select Folder</property>
+                <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
+                <layout manager="pack">
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
           </object>
         </child>
         <child>
@@ -426,6 +435,54 @@
                 <layout manager="pack">
                   <property name="padx">20</property>
                   <property name="pady">10</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="tk.Toplevel" id="folder_selector_window" named="True">
+    <property name="height">200</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame2">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Treeview" id="folder_select" named="True">
+            <property name="selectmode">extended</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame3">
+            <property name="height">300</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Button" id="cancelButton" named="True">
+                <property name="text" translatable="yes">Cancel</property>
+                <layout manager="pack">
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="OKbutton" named="True">
+                <property name="text" translatable="yes">OK</property>
+                <layout manager="pack">
                   <property name="side">left</property>
                 </layout>
               </object>

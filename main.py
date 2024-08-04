@@ -44,6 +44,7 @@ class EzShareCPAPUI:
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
     def disable_ui_elements(self):
         self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
         disable_ui_elements(self.builder)
@@ -145,6 +146,9 @@ class EzShareCPAPUI:
 
     def restore_defaults(self, event=None):
         self.callbacks.restore_defaults(event)
+    
+    def open_folder_selector(self, event=None):
+        self.callbacks.open_folder_selector(event)
 
     def import_cpap_data_with_oscar(self, event=None):
         self.callbacks.import_cpap_data_with_oscar(event)
