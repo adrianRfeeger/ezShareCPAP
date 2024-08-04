@@ -2,46 +2,46 @@ import tkinter as tk
 from tkinter import filedialog
 import pygubu
 
+import tkinter as tk
+import pygubu
+
 class FolderSelectorDialog:
     def __init__(self, master):
         self.master = master
-        self.dialog = tk.Toplevel(self.master)
-        self.dialog.title("Select Folder")
-        self.dialog.transient(self.master)  # Set to be a transient window of the main application window
-        self.dialog.geometry("400x400")  # Optional: Adjust size according to needs
+        self.builder = pygubu.Builder()
+        self.builder.add_from_file('ezsharecpap.ui')  # Load the UI definition from the XML file
+        self.dialog = self.builder.get_object('folder_selector_window', self.master)
 
-        self.setup_widgets()
-
-    def setup_widgets(self):
-        self.label = tk.Label(self.dialog, text="Choose a folder:")
-        self.label.pack(pady=10)
-
-        self.path_var = tk.StringVar()
-        self.entry = tk.Entry(self.dialog, textvariable=self.path_var, width=50)
-        self.entry.pack(pady=10)
-
-        self.browse_button = tk.Button(self.dialog, text="Browse...", command=self.browse_folder)
-        self.browse_button.pack(pady=5)
-
-        self.ok_button = tk.Button(self.dialog, text="OK", command=self.confirm_selection)
-        self.ok_button.pack(pady=5)
-
-        self.cancel_button = tk.Button(self.dialog, text="Cancel", command=self.dialog.destroy)
-        self.cancel_button.pack(pady=5)
+        # Define the entry widget variable and bind callbacks
+        self.folder_path_var = self.builder.get_variable('folder_path_var')  # Ensure this variable is defined in Pygubu
+        self.builder.connect_callbacks({
+            'browse_folder': self.browse_folder,
+            'confirm_selection': self.confirm_selection,
+            'close_dialog': self.close_dialog
+        })
 
     def browse_folder(self):
-        folder_selected = filedialog.askdirectory()
+        folder_selected = tk.filedialog.askdirectory()
         if folder_selected:
-            self.path_var.set(folder_selected)
+            self.folder_path_var.set(folder_selected)
 
     def confirm_selection(self):
-        # Here you can add code to handle the selected folder path
-        folder_path = self.path_var.get()
-        print(f"Folder selected: {folder_path}")  # Placeholder for your own functionality
-        self.dialog.destroy()  # Close the dialog
+        folder_path = self.folder_path_var.get()
+        print(f"Folder selected: {folder_path}")
+        self.close_dialog()
+
+    def close_dialog(self):
+        self.dialog.destroy()
 
     def run(self):
-        self.dialog.wait_window()  # Wait for the dialog to close
+        self.dialog.mainloop()
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    root.withdraw()  # Optional: Hide the main window
+    fsd = FolderSelectorDialog(root)
+    fsd.run()
+
 
 if __name__ == '__main__':
     root = tk.Tk()

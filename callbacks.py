@@ -6,6 +6,7 @@ from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status
 from wifi_utils import disconnect_from_wifi
+from folder_selector import FolderSelectorDialog
 
 class Callbacks:
     def __init__(self, app):
@@ -149,9 +150,9 @@ class Callbacks:
         self.app.main_window.quit()
     
     def open_folder_selector(self, event=None):
-        # Access the folder selector window defined in Pygubu and show it
-        folder_selector_window = self.app.builder.get_object('folder_selector_window')
-        folder_selector_window.deiconify()  # Make sure to show the window if it was previously hidden
+        # Create a new instance of the folder selector window
+        folder_selector_dialog = FolderSelectorDialog(self.app.main_window)  # Assuming the main window is passed correctly
+        folder_selector_dialog.run()  # This will open the dialog
 
     def import_cpap_data_with_oscar(self, event=None):
         if not self.buttons_active['import_oscar']:
