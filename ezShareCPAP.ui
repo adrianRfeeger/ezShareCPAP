@@ -446,12 +446,18 @@
   </object>
   <object class="tk.Toplevel" id="folder_selector_window" named="True">
     <property name="height">200</property>
+    <property name="minsize">420|400</property>
+    <property name="resizable">none</property>
+    <property name="takefocus">true</property>
+    <property name="title" translatable="yes">Select Folder on ez Share SDcard</property>
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="frame2">
         <property name="height">200</property>
         <property name="width">200</property>
         <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
           <property name="side">top</property>
         </layout>
         <child>
