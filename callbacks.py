@@ -6,7 +6,6 @@ from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status
 from wifi_utils import disconnect_from_wifi
-from folder_selector import FolderSelector
 
 class Callbacks:
     def __init__(self, app):
@@ -148,12 +147,7 @@ class Callbacks:
         update_status(self.app, 'Ready.', 'info')
         self.app.builder.get_object('progress_bar')['value'] = 0
         self.app.main_window.quit()
-    
-
-    def open_folder_selector(self, event=None):
-        folder_selector = FolderSelector(self.app)
-        folder_selector.run()
-
+        
     def import_cpap_data_with_oscar(self, event=None):
         if not self.buttons_active['import_oscar']:
             return

@@ -94,6 +94,8 @@ class ezShare:
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
         files, dirs = list_dir(self, url)
+        logging.debug(f"Files found: {files}")
+        logging.debug(f"Directories found: {dirs}")
         for filename, file_url, file_ts in files:
             local_path = dir_path / filename
             if overwrite or not local_path.is_file() or local_path.stat().st_mtime < file_ts:

@@ -42,6 +42,8 @@ def parse_directory_listing(soup, ezshare_instance):
     for line in lines:
         if line.strip():
             parts = line.rsplit(maxsplit=2)
+            if len(parts) < 2:
+                continue  # Skip lines that don't have enough parts to parse
             modifypart = parts[0].replace('- ', '-0').replace(': ', ':0')
             regex_pattern = r'\d*-\d*-\d*\s*\d*:\d*:\d*'
             match = re.search(regex_pattern, modifypart)
@@ -60,8 +62,11 @@ def parse_directory_listing(soup, ezshare_instance):
                     dirs.append((link_text, link_href))
     return files, dirs
 
+
 def check_files(ezshare_instance, files, url, dir_path, total_files, processed_files, is_running):
-    for filename, file_url, file_ts in files:
+    for file_info in files:
+        filename, file_url, file_ts = file_info  # Unpacking the tuple
+
         if not is_running():
             ezshare_instance.update_status('Process cancelled.', 'info')
             break
@@ -77,6 +82,7 @@ def check_files(ezshare_instance, files, url, dir_path, total_files, processed_f
                 progress_value = (processed_files / total_files) * 100
                 ezshare_instance.update_progress(min(max(0, progress_value), 100))
     return processed_files
+
 
 def should_download(ezshare_instance, local_path, file_ts):
     return not (local_path.is_file() and not (ezshare_instance.overwrite or local_path.stat().st_mtime < file_ts) and not ezshare_instance.keep_old)
@@ -114,7 +120,9 @@ def download_file(ezshare_instance, url, file_path, file_ts=None):
     return True
 
 def check_dirs(ezshare_instance, dirs, url, dir_path, total_files, processed_files, is_running):
-    for dirname, dir_url in dirs:
+    for dir_info in dirs:
+        dirname, dir_url = dir_info  # Unpacking the tuple
+
         if not is_running():
             ezshare_instance.update_status('Process cancelled.', 'info')
             break
@@ -124,3 +132,4 @@ def check_dirs(ezshare_instance, dirs, url, dir_path, total_files, processed_fil
         absolute_dir_url = urllib.parse.urljoin(url, dir_url)
         processed_files = recursive_traversal(ezshare_instance, absolute_dir_url, new_dir_path, total_files, processed_files, is_running)
     return processed_files
+
