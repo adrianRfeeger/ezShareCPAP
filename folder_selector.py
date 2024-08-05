@@ -1,15 +1,17 @@
-import os
 import tkinter as tk
-from tkinter import filedialog, messagebox
 from tkinter import ttk
 import pygubu
 import threading
 from wifi_utils import connect_to_wifi, disconnect_from_wifi
 from ezshare import ezShare
+from file_ops import list_dir
+from status_manager import update_status, set_status_colour, log_status
+import urllib.parse
 
 class FolderSelectorDialog:
-    def __init__(self, master):
+    def __init__(self, master, main_window):
         self.master = master
+        self.main_window = main_window  # Store reference to main window
         self.builder = pygubu.Builder()
         self.builder.add_from_file('ezsharecpap.ui')  # Load the UI definition from the XML file
         self.dialog = self.builder.get_object('folder_selector_window', self.master)
@@ -26,6 +28,9 @@ class FolderSelectorDialog:
         # Initialize ezShare instance
         self.ezshare = ezShare()
 
+        # Status timer
+        self.status_timer = None
+
         # Populate the Treeview with the HTTP server contents
         self.populate_treeview_with_http()
 
@@ -34,13 +39,19 @@ class FolderSelectorDialog:
         threading.Thread(target=self._connect_and_populate).start()
 
     def _connect_and_populate(self):
-        ssid = self.builder.get_object('ssid_entry').get()
-        psk = self.builder.get_object('psk_entry').get()
-        url = self.builder.get_object('url_entry').get()
+        ssid = self.main_window.builder.get_object('ssid_entry').get()
+        psk = self.main_window.builder.get_object('psk_entry').get()
+        url = self.main_window.builder.get_object('url_entry').get()
+
+        print(f"SSID: {ssid}, PSK: {psk}, URL: {url}")  # Debugging statement
+
+        if not url:
+            update_status(self, 'URL is empty. Please provide a valid URL.', 'error', target_app=self.main_window)
+            return
 
         try:
             connect_to_wifi(self.ezshare, ssid, psk)
-            self.update_status('Connected to ez Share Wi-Fi.')
+            update_status(self, 'Connected to ez Share Wi-Fi.', target_app=self.main_window)
 
             # Clear the treeview
             for item in self.treeview.get_children():
@@ -49,44 +60,31 @@ class FolderSelectorDialog:
             # Populate treeview with HTTP server contents
             self._populate_treeview_node('', url)
 
-            self.update_status('Populated treeview with HTTP server contents.')
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to connect to Wi-Fi: {e}")
+            update_status(self, 'Populated treeview with HTTP server contents.', target_app=self.main_window)
+        except RuntimeError as e:
+            update_status(self, f'Failed to connect to Wi-Fi: {e}', 'error', target_app=self.main_window)
         finally:
             disconnect_from_wifi(self.ezshare)
-            self.update_status('Disconnected from ez Share Wi-Fi.')
 
-    def _populate_treeview_node(self, parent_node, url):
-        # Here you will use the existing ezShare methods to traverse the HTTP server
-        files, dirs = self.ezshare.list_dir(url)
-        for filename, file_url, file_ts in files:
-            self.treeview.insert(parent_node, 'end', text=filename, open=False)
+    def _populate_treeview_node(self, parent, url):
+        files, dirs = list_dir(self.ezshare, url)
         for dirname, dir_url in dirs:
-            node = self.treeview.insert(parent_node, 'end', text=dirname, open=False)
-            self._populate_treeview_node(node, dir_url)
+            node_id = self.treeview.insert(parent, 'end', text=dirname, open=False)
+            self._populate_treeview_node(node_id, urllib.parse.urljoin(url, dir_url))
+        for filename, file_url, file_ts in files:
+            self.treeview.insert(parent, 'end', text=filename)
 
-    def browse_folder(self, event=None):
-        folder_selected = filedialog.askdirectory()
-        if folder_selected:
-            self.folder_path_var.set(folder_selected)
-            self.populate_treeview(folder_selected)
+    def reset_status(self):
+        update_status(self.main_window, 'Ready.', 'info')
+
+    def close_dialog(self, event=None):
+        self.dialog.destroy()
 
     def confirm_selection(self, event=None):
         folder_path = self.folder_path_var.get()
         print(f"Folder selected: {folder_path}")
         self.close_dialog()
 
-    def close_dialog(self, event=None):
-        self.dialog.destroy()
-
-    def update_status(self, message):
-        print(message)
-
     def run(self):
+        self.dialog.deiconify()
         self.dialog.mainloop()
-
-if __name__ == '__main__':
-    root = tk.Tk()
-    root.withdraw()  # Optional: Hide the main window
-    fsd = FolderSelectorDialog(root)
-    fsd.run()

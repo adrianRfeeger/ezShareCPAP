@@ -10,17 +10,13 @@ from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
 from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements, resource_path
+from folder_selector import FolderSelectorDialog  # Import FolderSelectorDialog
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
         self.config_file = pathlib.Path.home() / 'config.ini'
         self.config_manager = ConfigManager(self.config_file)
         self.ezshare = ezShare()
-
-      # Ensure that the ezshare URL is set from the configuration
-        self.ezshare.url = self.config_manager.get_setting('Settings', 'url')
-        logging.debug(f"ezshare URL: {self.ezshare.url}")
-
         self.worker = None
         self.worker_queue = queue.Queue()
         self.is_running = False
@@ -48,6 +44,9 @@ class EzShareCPAPUI:
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+        # Add a method to open the folder selector
+        self.builder.get_object('folderselectorButton').config(command=self.open_folder_selector)
 
     def disable_ui_elements(self):
         self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
@@ -152,7 +151,9 @@ class EzShareCPAPUI:
         self.callbacks.restore_defaults(event)
     
     def open_folder_selector(self, event=None):
-        self.callbacks.open_folder_selector(event)
+        # Create and open the folder selector dialog
+        folder_selector_dialog = FolderSelectorDialog(self.main_window, self)
+        folder_selector_dialog.run()
 
     def import_cpap_data_with_oscar(self, event=None):
         self.callbacks.import_cpap_data_with_oscar(event)
