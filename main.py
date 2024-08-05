@@ -21,6 +21,7 @@ class EzShareCPAPUI:
         self.worker_queue = queue.Queue()
         self.is_running = False
         self.status_timer = None
+        self.quitting = False  # Add a quitting flag
 
         self.builder = pygubu.Builder()
         self.builder.add_from_file('ezsharecpap.ui')
@@ -49,11 +50,13 @@ class EzShareCPAPUI:
         self.builder.get_object('folderselectorButton').config(command=self.open_folder_selector)
 
     def disable_ui_elements(self):
+        logging.debug("Disabling UI elements")
         self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
         disable_ui_elements(self.builder)
         self.builder.get_object('cancel_button').config(default=tk.ACTIVE)
 
     def enable_ui_elements(self):
+        logging.debug("Enabling UI elements")
         self.callbacks.buttons_active = {key: True for key in self.callbacks.buttons_active}
         enable_ui_elements(self.builder)
         self.builder.get_object('cancel_button').config(default=tk.NORMAL)
@@ -135,14 +138,23 @@ class EzShareCPAPUI:
         self.config_manager.set_setting('Settings', 'import_oscar', str(self.import_oscar_var.get()))
 
     def start_process(self, event=None):
+        logging.debug("Starting process")
         self.is_running = True
         self.callbacks.start_process(event)
 
     def cancel_process(self, event=None):
+        logging.debug("Cancelling process")
         self.callbacks.cancel_process(event)
 
     def quit_application(self, event=None):
-        self.callbacks.quit_application(event)
+        logging.debug("Quitting application")
+        self.quitting = True  # Set quitting flag
+        if self.worker and self.worker.is_alive():
+            logging.debug("Stopping worker thread before quitting")
+            self.worker_queue.put(('quit',))  # Tell the worker thread to quit
+        if self.main_window:
+            logging.debug("Destroying main window")
+            self.main_window.destroy()
 
     def open_oscar_download_page(self, event=None):
         self.callbacks.open_oscar_download_page(event)
@@ -151,6 +163,7 @@ class EzShareCPAPUI:
         self.callbacks.restore_defaults(event)
     
     def open_folder_selector(self, event=None):
+        logging.debug("Opening folder selector")
         # Create and open the folder selector dialog
         folder_selector_dialog = FolderSelectorDialog(self.main_window, self)
         folder_selector_dialog.run()
@@ -159,6 +172,7 @@ class EzShareCPAPUI:
         self.callbacks.import_cpap_data_with_oscar(event)
 
     def ez_share_config(self, event=None):
+        logging.debug("Configuring ezShare")
         self.is_running = True
         self.ezshare_config.configure_ezshare(event)
 

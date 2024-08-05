@@ -5,8 +5,9 @@ import threading
 from wifi_utils import connect_to_wifi, disconnect_from_wifi
 from ezshare import ezShare
 from file_ops import list_dir
-from status_manager import update_status, set_status_colour, log_status
+from status_manager import update_status
 import urllib.parse
+import logging
 
 class FolderSelectorDialog:
     def __init__(self, master, main_window):
@@ -25,66 +26,114 @@ class FolderSelectorDialog:
         # Initialize the Treeview
         self.treeview = self.builder.get_object('folder_select')
 
+        # Load icons without scaling
+        self.folder_icon = tk.PhotoImage(file="folder.png")
+        self.file_icon = tk.PhotoImage(file="file.png")
+        self.sd_card_icon = tk.PhotoImage(file="sdcard.png")
+
+        # Set Treeview font size to 14 and row height to 18
+        self.style = ttk.Style()
+        self.style.configure("Treeview", font=("Arial", 14))
+        self.style.configure("Treeview", rowheight=18)
+
         # Initialize ezShare instance
         self.ezshare = ezShare()
 
         # Status timer
         self.status_timer = None
+        self.dialog_running = False  # Add dialog running flag
 
-        # Populate the Treeview with the HTTP server contents
-        self.populate_treeview_with_http()
+        logging.debug("FolderSelectorDialog initialized")
 
     def populate_treeview_with_http(self):
+        logging.debug("Starting to populate treeview with HTTP")
         # Connect to Wi-Fi and traverse HTTP server in a separate thread to avoid blocking the UI
         threading.Thread(target=self._connect_and_populate).start()
 
     def _connect_and_populate(self):
+        logging.debug("Begin _connect_and_populate")
+        if self.main_window.quitting:
+            logging.debug("Quitting detected, aborting populate")
+            return
+        
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
         url = self.main_window.builder.get_object('url_entry').get()
 
-        print(f"SSID: {ssid}, PSK: {psk}, URL: {url}")  # Debugging statement
+        logging.debug(f"SSID: {ssid}, PSK: {psk}, URL: {url}")  # Debugging statement
 
         if not url:
-            update_status(self, 'URL is empty. Please provide a valid URL.', 'error', target_app=self.main_window)
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'URL is empty. Please provide a valid URL.', 'error'))
             return
 
         try:
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi.'))
             connect_to_wifi(self.ezshare, ssid, psk)
-            update_status(self, 'Connected to ez Share Wi-Fi.', target_app=self.main_window)
+            if self.main_window.quitting:  # Check if the application is quitting
+                logging.debug("Quitting detected after connecting, aborting")
+                return
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Clear the treeview
+            logging.debug("Clearing the treeview")
             for item in self.treeview.get_children():
                 self.treeview.delete(item)
 
             # Populate treeview with HTTP server contents
-            self._populate_treeview_node('', url)
+            logging.debug("Populating treeview with HTTP server contents")
+            root_node = self.treeview.insert('', 'end', text='ez Share® Wi-Fi SD card', open=True, image=self.sd_card_icon)
+            self._populate_treeview_node(root_node, url)
 
-            update_status(self, 'Populated treeview with HTTP server contents.', target_app=self.main_window)
+            if self.main_window.quitting:  # Check again before finalizing
+                logging.debug("Quitting detected during population, aborting")
+                return
+
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Populated treeview with HTTP server contents.'))
         except RuntimeError as e:
-            update_status(self, f'Failed to connect to Wi-Fi: {e}', 'error', target_app=self.main_window)
+            if self.main_window.quitting:
+                logging.debug(f"Quitting detected after RuntimeError: {e}")
+                return
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
             disconnect_from_wifi(self.ezshare)
+            # Show the dialog after populating the treeview if not quitting
+            if not self.main_window.quitting:
+                logging.debug("Showing dialog after populating treeview")
+                self.dialog_running = True
+                self.dialog.deiconify()
 
     def _populate_treeview_node(self, parent, url):
-        files, dirs = list_dir(self.ezshare, url)
-        for dirname, dir_url in dirs:
-            node_id = self.treeview.insert(parent, 'end', text=dirname, open=False)
-            self._populate_treeview_node(node_id, urllib.parse.urljoin(url, dir_url))
-        for filename, file_url, file_ts in files:
-            self.treeview.insert(parent, 'end', text=filename)
+        if self.main_window.quitting:
+            logging.debug("Quitting detected, aborting node population")
+            return
+        
+        try:
+            files, dirs = list_dir(self.ezshare, url)
+            logging.debug(f"Directories found: {dirs}")
+            logging.debug(f"Files found: {files}")
+            for dirname, dir_url in dirs:
+                node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon)
+                self._populate_treeview_node(node_id, urllib.parse.urljoin(url, dir_url))
+            for file_info in files:
+                filename, file_url = file_info[:2]  # Unpack only the first two elements
+                self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon)
+        except Exception as e:
+            logging.error(f"Error populating treeview node: {e}")
 
     def reset_status(self):
-        update_status(self.main_window, 'Ready.', 'info')
+        self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Ready.', 'info'))
 
     def close_dialog(self, event=None):
+        logging.debug("Closing folder selector dialog")
+        self.dialog_running = False
         self.dialog.destroy()
 
     def confirm_selection(self, event=None):
         folder_path = self.folder_path_var.get()
-        print(f"Folder selected: {folder_path}")
+        logging.debug(f"Folder selected: {folder_path}")
         self.close_dialog()
 
     def run(self):
-        self.dialog.deiconify()
+        logging.debug("Running folder selector dialog")
+        self.populate_treeview_with_http()
         self.dialog.mainloop()

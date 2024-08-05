@@ -104,9 +104,9 @@ class Callbacks:
         update_status(self.app, 'Ready.', 'info')
 
     def quit_application(self, event=None):
-        if not self.buttons_active['quit']:
-            return
-
+        self.app.is_running = False
+        if self.app.folder_selector_dialog and self.app.folder_selector_dialog.dialog_running:
+            self.app.folder_selector_dialog.close_dialog()
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()

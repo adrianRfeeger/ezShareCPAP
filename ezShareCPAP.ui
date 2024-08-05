@@ -449,7 +449,7 @@
     <property name="minsize">420|400</property>
     <property name="resizable">none</property>
     <property name="takefocus">true</property>
-    <property name="title" translatable="yes">Select Folder on ez Share SDcard</property>
+    <property name="title" translatable="yes">Select Folder on ez Share SD card</property>
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="frame2">
