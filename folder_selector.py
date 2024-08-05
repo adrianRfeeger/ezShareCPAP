@@ -6,6 +6,7 @@ from wifi_utils import connect_to_wifi, disconnect_from_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
+from utils import resource_path
 import urllib.parse
 
 class FolderSelectorDialog:
@@ -13,7 +14,7 @@ class FolderSelectorDialog:
         self.master = master
         self.main_window = main_window  # Store reference to main window
         self.builder = pygubu.Builder()
-        self.builder.add_from_file('ezsharecpap.ui')  # Load the UI definition from the XML file
+        self.builder.add_from_file(resource_path('ezsharecpap.ui'))  # Load the UI definition from the XML file
         self.dialog = self.builder.get_object('folder_selector_window', self.master)
 
         # Retrieve the variable from the hidden Entry
@@ -26,9 +27,9 @@ class FolderSelectorDialog:
         self.treeview = self.builder.get_object('folder_select')
 
         # Load icons without scaling
-        self.folder_icon = tk.PhotoImage(file="folder.png")
-        self.file_icon = tk.PhotoImage(file="file.png")
-        self.sdcard_icon = tk.PhotoImage(file="sdcard.png")
+        self.folder_icon = tk.PhotoImage(file=resource_path("folder.png"))
+        self.file_icon = tk.PhotoImage(file=resource_path("file.png"))
+        self.sdcard_icon = tk.PhotoImage(file=resource_path("sdcard.png"))
 
         # Set Treeview font size to 14 and row height to 18
         self.style = ttk.Style()
@@ -65,13 +66,11 @@ class FolderSelectorDialog:
             root.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Clear the treeview
-            for item in self.treeview.get_children():
-                self.treeview.delete(item)
+            root.after(0, self.clear_treeview)
 
             # Populate treeview with HTTP server contents
             root.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
-            root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon)
-            self._populate_treeview_node(root_node, url)
+            root.after(0, lambda: self._populate_treeview_node(self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon), url))
 
             root.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
         except RuntimeError as e:
@@ -88,6 +87,10 @@ class FolderSelectorDialog:
             self._populate_treeview_node(node_id, urllib.parse.urljoin(url, dir_url))
         for filename, file_url, *_ in files:
             self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon)
+
+    def clear_treeview(self):
+        for item in self.treeview.get_children():
+            self.treeview.delete(item)
 
     def show_dialog(self):
         self.dialog.deiconify()
