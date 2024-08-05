@@ -1,5 +1,7 @@
+import os
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk
 import pygubu
 
 class FolderSelectorDialog:
@@ -15,10 +17,33 @@ class FolderSelectorDialog:
         # Connect the callbacks
         self.builder.connect_callbacks(self)
 
+        # Initialize the Treeview
+        self.treeview = self.builder.get_object('folder_select')
+
+        # Populate the Treeview with the current directory contents
+        self.populate_treeview(os.getcwd())
+
+    def populate_treeview(self, path):
+        # Clear the treeview
+        for item in self.treeview.get_children():
+            self.treeview.delete(item)
+
+        # Add root folder
+        root_node = self.treeview.insert('', 'end', text=path, open=True)
+        self.populate_treeview_node(root_node, path)
+
+    def populate_treeview_node(self, parent_node, path):
+        for entry in os.listdir(path):
+            entry_path = os.path.join(path, entry)
+            node = self.treeview.insert(parent_node, 'end', text=entry, open=False)
+            if os.path.isdir(entry_path):
+                self.populate_treeview_node(node, entry_path)
+
     def browse_folder(self, event=None):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
             self.folder_path_var.set(folder_selected)
+            self.populate_treeview(folder_selected)
 
     def confirm_selection(self, event=None):
         folder_path = self.folder_path_var.get()

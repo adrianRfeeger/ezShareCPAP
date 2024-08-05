@@ -461,7 +461,7 @@
           <property name="side">top</property>
         </layout>
         <child>
-          <object class="ttk.Treeview" id="treeview_directories" named="True">
+          <object class="ttk.Treeview" id="folder_select" named="True">
             <property name="cursor">based_arrow_down</property>
             <property name="selectmode">browse</property>
             <property name="show">tree</property>
