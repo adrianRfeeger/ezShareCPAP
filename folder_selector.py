@@ -70,7 +70,7 @@ class FolderSelectorDialog:
 
             # Populate treeview with HTTP server contents
             root.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
-            root.after(0, lambda: self._populate_treeview_node(self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon), url))
+            root.after(0, lambda: self._populate_treeview_node(self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=(url,)), url))
 
             root.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
         except RuntimeError as e:
@@ -83,10 +83,12 @@ class FolderSelectorDialog:
     def _populate_treeview_node(self, parent, url):
         files, dirs = list_dir(self.ezshare, url)
         for dirname, dir_url, *_ in dirs:
-            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon)
-            self._populate_treeview_node(node_id, urllib.parse.urljoin(url, dir_url))
+            full_dir_url = urllib.parse.urljoin(url, dir_url)
+            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=(full_dir_url,))
+            self._populate_treeview_node(node_id, full_dir_url)
         for filename, file_url, *_ in files:
-            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon)
+            full_file_url = urllib.parse.urljoin(url, file_url)
+            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=(full_file_url,))
 
     def clear_treeview(self):
         for item in self.treeview.get_children():
@@ -103,8 +105,12 @@ class FolderSelectorDialog:
         self.dialog.destroy()
 
     def confirm_selection(self, event=None):
-        folder_path = self.folder_path_var.get()
-        print(f"Folder selected: {folder_path}")
+        selected_item = self.treeview.selection()
+        if selected_item:
+            item_url = self.treeview.item(selected_item, 'tags')[0]
+            print(f"URL selected: {item_url}")
+            self.main_window.builder.get_object('url_entry').delete(0, tk.END)
+            self.main_window.builder.get_object('url_entry').insert(0, item_url)
         self.close_dialog()
 
     def run(self):

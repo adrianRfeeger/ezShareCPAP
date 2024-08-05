@@ -10,7 +10,7 @@ from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
 from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements, resource_path
-from folder_selector import FolderSelectorDialog  # Import FolderSelectorDialog
+from folder_selector import FolderSelectorDialog
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -21,7 +21,7 @@ class EzShareCPAPUI:
         self.worker_queue = queue.Queue()
         self.is_running = False
         self.status_timer = None
-        self.quitting = False  # Add a quitting flag
+        self.quitting = False
 
         self.builder = pygubu.Builder()
         self.builder.add_from_file(resource_path('ezsharecpap.ui'))
@@ -46,7 +46,7 @@ class EzShareCPAPUI:
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-        # Add a method to open the folder selector
+        # Method to open the folder selector
         self.builder.get_object('folderselectorButton').config(command=self.open_folder_selector)
 
     def disable_ui_elements(self):
