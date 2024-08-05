@@ -24,7 +24,7 @@ class EzShareCPAPUI:
         self.quitting = False  # Add a quitting flag
 
         self.builder = pygubu.Builder()
-        self.builder.add_from_file('ezsharecpap.ui')
+        self.builder.add_from_file(resource_path('ezsharecpap.ui'))
         self.main_window = self.builder.get_object('main_window', master)
         self.builder.connect_callbacks(self)
 

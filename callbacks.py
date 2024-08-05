@@ -5,7 +5,7 @@ import subprocess
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status
-from wifi_utils import disconnect_from_wifi, connect_to_wifi
+from wifi_utils import disconnect_from_wifi
 from folder_selector import FolderSelectorDialog
 
 class Callbacks:

@@ -3,8 +3,9 @@ import tkinter as tk
 import requests
 import subprocess
 from tkinter import messagebox
-from wifi_utils import connect_to_wifi, disconnect_from_wifi
-from utils import update_status, disable_ui_elements, enable_ui_elements
+from wifi_utils import connect_to_wifi
+from utils import disable_ui_elements, enable_ui_elements
+from status_manager import update_status
 import logging
 
 class EzShareConfig:

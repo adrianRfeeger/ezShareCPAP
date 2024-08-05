@@ -5,7 +5,6 @@ import time
 import pathlib
 import tkinter as tk
 from tkinter import filedialog
-from status_manager import update_status, set_status_colour, log_status
 
 def resource_path(relative_path):
     try:

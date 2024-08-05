@@ -1,70 +1,44 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-block_cipher = None
 
 a = Analysis(
-    ['main.py'],
-    pathex=['.'],
+    ['ezsharecpap.ui'],
+    pathex=[],
     binaries=[],
-    datas=[
-        ('icon.icns', '.'), 
-        ('config.ini', '.'),
-        ('ezsharecpap.ui', '.')
-        ],
-    hiddenimports=['ttkwidgets'],
+    datas=[],
+    hiddenimports=[],
     hookspath=[],
+    hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
-    optimize=2
+    optimize=0,
 )
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
     [],
     exclude_binaries=True,
-    name='ezShareCPAP',
+    name='ezsharecpap',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=False,
     upx=True,
-    console=False,
-    icon='icon.icns',
-    upx_args='--best --lzma'
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
 )
-
 coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=True,
+    strip=False,
     upx=True,
-    name='ezShareCPAP',
-    upx_args='--best --lzma'
-)
-
-app = BUNDLE(
-    coll,
-    name='ezShareCPAP.app',
-    icon='icon.icns',
-    bundle_identifier='com.ezsharecpap',
-    info_plist={
-        'CFBundleName': 'ezShareCPAP',
-        'CFBundleDisplayName': 'ezShareCPAP',
-        'CFBundleGetInfoString': 'ezShareCPAP',
-        'CFBundleIdentifier': 'com.ezsharecpap',
-        'CFBundleVersion': '1.0.1',
-        'CFBundleShortVersionString': '1.x.x',
-        'NSAppTransportSecurity': {
-            'NSAllowsArbitraryLoads': True,
-        },
-        'NSDocumentsFolderUsageDescription': 'This application requires access to the Documents folder.',
-        'NSLocalNetworkUsageDescription': 'This application requires access to the local network to find and communicate with the ez Share WiFi.',
-        'NSLocationWhenInUseUsageDescription': 'This application requires access to location information for to manage the WiFi network switching.',
-        'NSAppleEventsUsageDescription': 'This application requires access to AppleEvents to automate OSCAR import.',
-        'NSAccessibilityUsageDescription': 'This application requires access to Accessibility to automate OSCAR import.',
-    }
+    upx_exclude=[],
+    name='ezsharecpap',
 )

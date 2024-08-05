@@ -7,7 +7,7 @@ import logging
 from tempfile import NamedTemporaryFile
 import pathlib
 import os
-from utils import retry
+
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import threading
 from wifi_utils import connect_to_wifi, disconnect_from_wifi
 from ezshare import ezShare
 from file_ops import list_dir
-from status_manager import update_status, set_status_colour, log_status
+from status_manager import update_status
 import urllib.parse
 
 class FolderSelectorDialog:
