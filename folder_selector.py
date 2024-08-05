@@ -1,8 +1,11 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from tkinter import ttk
 import pygubu
+import threading
+from wifi_utils import connect_to_wifi, disconnect_from_wifi
+from ezshare import ezShare
 
 class FolderSelectorDialog:
     def __init__(self, master):
@@ -20,24 +23,47 @@ class FolderSelectorDialog:
         # Initialize the Treeview
         self.treeview = self.builder.get_object('folder_select')
 
-        # Populate the Treeview with the current directory contents
-        self.populate_treeview(os.getcwd())
+        # Initialize ezShare instance
+        self.ezshare = ezShare()
 
-    def populate_treeview(self, path):
-        # Clear the treeview
-        for item in self.treeview.get_children():
-            self.treeview.delete(item)
+        # Populate the Treeview with the HTTP server contents
+        self.populate_treeview_with_http()
 
-        # Add root folder
-        root_node = self.treeview.insert('', 'end', text=path, open=True)
-        self.populate_treeview_node(root_node, path)
+    def populate_treeview_with_http(self):
+        # Connect to Wi-Fi and traverse HTTP server in a separate thread to avoid blocking the UI
+        threading.Thread(target=self._connect_and_populate).start()
 
-    def populate_treeview_node(self, parent_node, path):
-        for entry in os.listdir(path):
-            entry_path = os.path.join(path, entry)
-            node = self.treeview.insert(parent_node, 'end', text=entry, open=False)
-            if os.path.isdir(entry_path):
-                self.populate_treeview_node(node, entry_path)
+    def _connect_and_populate(self):
+        ssid = self.builder.get_object('ssid_entry').get()
+        psk = self.builder.get_object('psk_entry').get()
+        url = self.builder.get_object('url_entry').get()
+
+        try:
+            connect_to_wifi(self.ezshare, ssid, psk)
+            self.update_status('Connected to ez Share Wi-Fi.')
+
+            # Clear the treeview
+            for item in self.treeview.get_children():
+                self.treeview.delete(item)
+
+            # Populate treeview with HTTP server contents
+            self._populate_treeview_node('', url)
+
+            self.update_status('Populated treeview with HTTP server contents.')
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to connect to Wi-Fi: {e}")
+        finally:
+            disconnect_from_wifi(self.ezshare)
+            self.update_status('Disconnected from ez Share Wi-Fi.')
+
+    def _populate_treeview_node(self, parent_node, url):
+        # Here you will use the existing ezShare methods to traverse the HTTP server
+        files, dirs = self.ezshare.list_dir(url)
+        for filename, file_url, file_ts in files:
+            self.treeview.insert(parent_node, 'end', text=filename, open=False)
+        for dirname, dir_url in dirs:
+            node = self.treeview.insert(parent_node, 'end', text=dirname, open=False)
+            self._populate_treeview_node(node, dir_url)
 
     def browse_folder(self, event=None):
         folder_selected = filedialog.askdirectory()
@@ -52,6 +78,9 @@ class FolderSelectorDialog:
 
     def close_dialog(self, event=None):
         self.dialog.destroy()
+
+    def update_status(self, message):
+        print(message)
 
     def run(self):
         self.dialog.mainloop()

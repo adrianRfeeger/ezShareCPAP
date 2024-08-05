@@ -1,10 +1,9 @@
-# ez_share_config.py
 import threading
 import tkinter as tk
 import requests
 import subprocess
 from tkinter import messagebox
-from wifi_utils import connect_to_wifi, wifi_connected, disconnect_from_wifi
+from wifi_utils import connect_to_wifi, disconnect_from_wifi
 from utils import update_status, disable_ui_elements, enable_ui_elements
 import logging
 
@@ -36,7 +35,7 @@ class EzShareConfig:
     def _connect_and_configure(self):
         try:
             logging.debug("Starting connection to Wi-Fi...")
-            connect_to_wifi(self.app.ezshare)
+            connect_to_wifi(self.app.ezshare, self.app.builder.get_object('ssid_entry').get(), self.app.builder.get_object('psk_entry').get())
             if self.app.is_running:  # Check if still running before proceeding
                 self.app.main_window.after(self.app.ezshare.connection_delay * 1000, self._check_wifi_connection)
             else:
@@ -66,7 +65,7 @@ class EzShareConfig:
         logging.debug("Parameters set for ezShare.")
 
     def _check_wifi_connection(self):
-        if wifi_connected(self.app.ezshare):
+        if self.app.ezshare.wifi_connected():
             self._open_configuration_page()
         else:
             update_status(self.app, 'Failed to connect to the ez Share Wi-Fi.', 'error')

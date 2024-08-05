@@ -78,7 +78,7 @@ class ezShare:
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
-                connect_to_wifi(self)
+                connect_to_wifi(self, self.ssid, self.psk)
                 self.update_status(f'Connected to {self.ssid}.')
                 if not self._is_running:
                     raise RuntimeError("Operation cancelled by user.")
@@ -107,7 +107,7 @@ class ezShare:
         return total_files
 
     def run_after_connection_delay(self):
-        if not wifi_connected(self):
+        if not self.wifi_connected():
             self.update_status('Unable to connect automatically, please connect manually.', 'error')
             return
 
@@ -126,3 +126,6 @@ class ezShare:
     def stop(self):
         self._is_running = False
         self.update_status('Process stopped by user.', 'info')
+
+    def wifi_connected(self):
+        return wifi_connected(self)
