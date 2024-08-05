@@ -60,7 +60,7 @@ class FolderSelectorDialog:
             return
 
         try:
-            root.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi.'))
+            root.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
             connect_to_wifi(self.ezshare, ssid, psk)
             root.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
@@ -69,10 +69,11 @@ class FolderSelectorDialog:
                 self.treeview.delete(item)
 
             # Populate treeview with HTTP server contents
+            root.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
             root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon)
             self._populate_treeview_node(root_node, url)
 
-            root.after(0, lambda: update_status(self.main_window, 'Populated treeview with HTTP server contents.'))
+            root.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
         except RuntimeError as e:
             root.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
