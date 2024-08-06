@@ -234,8 +234,7 @@
                     <property name="text" translatable="yes">On Completion:</property>
                     <property name="width">300</property>
                     <layout manager="pack">
-                      <property name="anchor">w</property>
-                      <property name="expand">false</property>
+                      <property name="expand">true</property>
                       <property name="fill">both</property>
                       <property name="padx">10</property>
                       <property name="side">left</property>

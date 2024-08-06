@@ -42,6 +42,9 @@ class FolderSelectorDialog:
         # Status timer
         self.status_timer = None
 
+        # Bind the selection event to control selection
+        self.treeview.bind('<<TreeviewSelect>>', self.on_treeview_select)
+
     def populate_treeview_with_http(self):
         # Hide the dialog before populating the Treeview
         self.dialog.withdraw()
@@ -52,13 +55,9 @@ class FolderSelectorDialog:
         root = self.main_window.main_window  # Access the root window
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
-        url = self.main_window.builder.get_object('url_entry').get()
+        base_url = 'http://192.168.4.1/dir?dir=A:'
 
-        print(f"SSID: {ssid}, PSK: {psk}, URL: {url}")  # Debugging statement
-
-        if not url:
-            root.after(0, lambda: update_status(self.main_window, 'URL is empty. Please provide a valid URL.', 'error'))
-            return
+        print(f"SSID: {ssid}, PSK: {psk}, Base URL: {base_url}")  # Debugging statement
 
         try:
             root.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
@@ -66,11 +65,13 @@ class FolderSelectorDialog:
             root.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Clear the treeview
-            root.after(0, self.clear_treeview)
+            for item in self.treeview.get_children():
+                self.treeview.delete(item)
 
             # Populate treeview with HTTP server contents
             root.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
-            root.after(0, lambda: self._populate_treeview_node(self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=(url,)), url))
+            root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
+            self._populate_treeview_node(root_node, base_url)
 
             root.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
         except RuntimeError as e:
@@ -78,21 +79,27 @@ class FolderSelectorDialog:
         finally:
             disconnect_from_wifi(self.ezshare)
             # Show the dialog again after populating the Treeview
-            root.after(0, self.show_dialog)
+            root.after(0, self.ensure_treeview_populated)
 
     def _populate_treeview_node(self, parent, url):
         files, dirs = list_dir(self.ezshare, url)
         for dirname, dir_url, *_ in dirs:
             full_dir_url = urllib.parse.urljoin(url, dir_url)
-            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=(full_dir_url,))
+            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=('folder', full_dir_url))
             self._populate_treeview_node(node_id, full_dir_url)
         for filename, file_url, *_ in files:
             full_file_url = urllib.parse.urljoin(url, file_url)
-            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=(full_file_url,))
+            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=('file', full_file_url))
 
-    def clear_treeview(self):
-        for item in self.treeview.get_children():
-            self.treeview.delete(item)
+    def ensure_treeview_populated(self):
+        # Check if the treeview has more than one item (excluding the root node)
+        if len(self.treeview.get_children('')) > 0:
+            print("Treeview populated correctly.")
+            self.show_dialog()
+        else:
+            print("Treeview not populated yet. Retrying...")
+            # Retry after a short delay if not populated yet
+            self.dialog.after(100, self.ensure_treeview_populated)
 
     def show_dialog(self):
         self.dialog.deiconify()
@@ -107,11 +114,20 @@ class FolderSelectorDialog:
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
         if selected_item:
-            item_url = self.treeview.item(selected_item, 'tags')[0]
-            print(f"URL selected: {item_url}")
-            self.main_window.builder.get_object('url_entry').delete(0, tk.END)
-            self.main_window.builder.get_object('url_entry').insert(0, item_url)
+            item_tag = self.treeview.item(selected_item, 'tags')[0]
+            if item_tag == 'folder':
+                folder_url = self.treeview.item(selected_item, 'tags')[1]
+                self.main_window.builder.get_object('url_entry').delete(0, tk.END)
+                self.main_window.builder.get_object('url_entry').insert(0, folder_url)
+                print(f"URL selected: {folder_url}")
         self.close_dialog()
+
+    def on_treeview_select(self, event):
+        selected_item = self.treeview.selection()
+        if selected_item:
+            item_tag = self.treeview.item(selected_item, 'tags')[0]
+            if item_tag == 'file':
+                self.treeview.selection_remove(selected_item)
 
     def run(self):
         self.populate_treeview_with_http()  # Populate the Treeview before showing the dialog
