@@ -244,7 +244,7 @@
                       <object class="ttk.Checkbutton" id="import_oscar_checkbox" named="True">
                         <property name="state">normal</property>
                         <property name="style">TCheckbutton</property>
-                        <property name="text" translatable="yes">Import with OSCAR</property>
+                        <property name="text" translatable="yes">Open OSCAR</property>
                         <layout manager="pack">
                           <property name="anchor">nw</property>
                           <property name="expand">true</property>
