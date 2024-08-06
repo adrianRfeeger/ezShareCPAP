@@ -86,6 +86,8 @@ def disable_ui_elements(builder):
         builder.get_object('restore_defaults_button').config(state=tk.DISABLED)
         builder.get_object('quit_button').config(state=tk.DISABLED)
         builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
+        builder.get_object('folderselectorButton').config(state=tk.DISABLED)
+
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
 
@@ -100,5 +102,7 @@ def enable_ui_elements(builder):
         builder.get_object('restore_defaults_button').config(state=tk.NORMAL)
         builder.get_object('quit_button').config(state=tk.NORMAL)
         builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
+        builder.get_object('folderselectorButton').config(state=tk.NORMAL)
+
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
