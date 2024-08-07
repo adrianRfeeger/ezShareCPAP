@@ -1,9 +1,9 @@
 import pathlib
 import tkinter as tk
+from tkinter import ttk, BooleanVar
 import queue
 import logging
 import pygubu
-from tkinter import BooleanVar
 from ezshare import ezShare
 from config_manager import ConfigManager
 from callbacks import Callbacks
@@ -23,9 +23,14 @@ class EzShareCPAPUI:
         self.status_timer = None
         self.quitting = False
 
+        # Set up main window and ttk theme
+        self.main_window = tk.Tk()
+        self.main_window.title('EzShareCPAP')
+        ttk.Style().theme_use('aqua')
+
         self.builder = pygubu.Builder()
         self.builder.add_from_file(resource_path('ezsharecpap.ui'))
-        self.main_window = self.builder.get_object('main_window', master)
+        self.builder.get_object('main_window', self.main_window)
         self.builder.connect_callbacks(self)
 
         icon_path = resource_path('icon.png')
