@@ -97,6 +97,7 @@
             </child>
             <child>
               <object class="ttk.Button" id="folderselectorButton" named="True">
+                <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Select Folder</property>
                 <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
                 <layout manager="pack">
@@ -157,6 +158,7 @@
                 </child>
                 <child>
                   <object class="ttk.Button" id="configure_wifi_button" named="True">
+                    <property name="takefocus">false</property>
                     <property name="text" translatable="yes">Configure</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="ez_share_config" add="" />
                     <layout manager="pack">
@@ -308,6 +310,7 @@
                     </layout>
                     <child>
                       <object class="ttk.Button" id="save_button" named="True">
+                        <property name="takefocus">false</property>
                         <property name="text" translatable="yes">Save</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="save_config" add="" />
                         <layout manager="pack">
@@ -321,6 +324,7 @@
                     </child>
                     <child>
                       <object class="ttk.Button" id="restore_defaults_button" named="True">
+                        <property name="takefocus">false</property>
                         <property name="text" translatable="yes">Defaults</property>
                         <bind sequence="&lt;ButtonRelease&gt;" handler="restore_defaults" add="" />
                         <layout manager="pack">
@@ -379,6 +383,7 @@
                 </layout>
                 <child>
                   <object class="ttk.Button" id="cancel_button" named="True">
+                    <property name="takefocus">false</property>
                     <property name="text" translatable="yes">Cancel</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_process" add="" />
                     <layout manager="pack">
@@ -392,6 +397,7 @@
                 </child>
                 <child>
                   <object class="ttk.Button" id="quit_button" named="True">
+                    <property name="takefocus">false</property>
                     <property name="text" translatable="yes">Quit</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="quit_application" add="" />
                     <layout manager="pack">
