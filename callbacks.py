@@ -11,6 +11,7 @@ from folder_selector import FolderSelectorDialog
 class Callbacks:
     def __init__(self, app):
         self.app = app
+        self.folder_selector_dialog = None
         self.buttons_active = {
             'start': True,
             'cancel': True,
@@ -20,7 +21,7 @@ class Callbacks:
             'save': True,
             'restore_defaults': True,
             'import_oscar': True,
-            'select_folder': True  # Ensure the 'select_folder' button is active
+            'select_folder': True  # Added for folder selection
         }
 
     def _set_config(self, settings):
@@ -92,21 +93,27 @@ class Callbacks:
         if not self.buttons_active['cancel']:
             return
 
+        # Cancel any running worker processes
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
             self.app.builder.get_object('progress_bar')['value'] = 0
+
+        # Hide the folder selector window if it is open
+        if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
+            self.folder_selector_dialog.close_dialog()
+
         update_status(self.app, 'Process cancelled.', 'info')
         self.app.is_running = False
-        enable_ui_elements(self.app.builder)
+        self.app.enable_ui_elements()
         self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
         disconnect_from_wifi(self.app.ezshare)
         update_status(self.app, 'Ready.', 'info')
 
     def quit_application(self, event=None):
-        self.app.is_running = False
-        if self.app.folder_selector_dialog and self.app.folder_selector_dialog.dialog_running:
-            self.app.folder_selector_dialog.close_dialog()
+        if not self.buttons_active['quit']:
+            return
+
         if self.app.worker and self.app.worker.is_alive():
             self.app.worker.stop()
             self.app.worker.join()
@@ -149,11 +156,24 @@ class Callbacks:
         update_status(self.app, 'Ready.', 'info')
         self.app.builder.get_object('progress_bar')['value'] = 0
         self.app.main_window.quit()
-
+    
     def open_folder_selector(self, event=None):
+        if not self.buttons_active['select_folder']:
+            return
+
+        # Disable UI elements except for cancel button
+        self.app.disable_ui_elements()
+        self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
+
         # Create a new instance of the folder selector window
-        folder_selector_dialog = FolderSelectorDialog(self.app.main_window)  # Assuming the main window is passed correctly
-        folder_selector_dialog.run()  # This will open the dialog
+        self.folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
+        self.folder_selector_dialog.run()
+
+    def close_folder_selector(self):
+        # Ensure the folder selector dialog is closed and UI elements are re-enabled
+        if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
+            self.folder_selector_dialog.close_dialog()
+        self.app.enable_ui_elements()
 
     def import_cpap_data_with_oscar(self, event=None):
         if not self.buttons_active['import_oscar']:

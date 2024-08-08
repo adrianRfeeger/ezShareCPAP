@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
 class ConfigManager:
     def __init__(self, config_file):
         self.config_file = config_file
-        self.config = configparser.ConfigParser(interpolation=None)  # Disable interpolation
+        self.config = configparser.ConfigParser()
         self.load_config()
 
     def load_config(self):

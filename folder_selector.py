@@ -12,7 +12,7 @@ import urllib.parse
 class FolderSelectorDialog:
     def __init__(self, master, main_window):
         self.master = master
-        self.main_window = main_window  # Store reference to main window
+        self.main_window = main_window  # This should be the main application instance
         self.builder = pygubu.Builder()
         self.builder.add_from_file(resource_path('ezsharecpap.ui'))  # Load the UI definition from the XML file
         self.dialog = self.builder.get_object('folder_selector_window', self.master)
@@ -52,7 +52,6 @@ class FolderSelectorDialog:
         threading.Thread(target=self._connect_and_populate).start()
 
     def _connect_and_populate(self):
-        root = self.main_window.main_window  # Access the root window
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
         base_url = 'http://192.168.4.1/dir?dir=A:'
@@ -60,26 +59,26 @@ class FolderSelectorDialog:
         print(f"SSID: {ssid}, PSK: {psk}, Base URL: {base_url}")  # Debugging statement
 
         try:
-            root.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
             connect_to_wifi(self.ezshare, ssid, psk)
-            root.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Clear the treeview
             for item in self.treeview.get_children():
                 self.treeview.delete(item)
 
             # Populate treeview with HTTP server contents
-            root.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
             root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
             self._populate_treeview_node(root_node, base_url)
 
-            root.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
         except RuntimeError as e:
-            root.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
             disconnect_from_wifi(self.ezshare)
             # Show the dialog again after populating the Treeview
-            root.after(0, self.ensure_treeview_populated)
+            self.main_window.main_window.after(0, self.ensure_treeview_populated)
 
     def _populate_treeview_node(self, parent, url):
         files, dirs = list_dir(self.ezshare, url)
@@ -106,10 +105,11 @@ class FolderSelectorDialog:
         self.dialog.lift()
 
     def reset_status(self):
-        self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Ready.', 'info'))
+        self.main_window.after(0, lambda: update_status(self.main_window, 'Ready.', 'info'))
 
     def close_dialog(self, event=None):
         self.dialog.destroy()
+        self.main_window.enable_ui_elements()  # Re-enable UI elements when the dialog is closed
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
@@ -132,3 +132,9 @@ class FolderSelectorDialog:
     def run(self):
         self.populate_treeview_with_http()  # Populate the Treeview before showing the dialog
         self.dialog.mainloop()
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    root.withdraw()  # Optional: Hide the main window
+    fsd = FolderSelectorDialog(root, root)
+    fsd.run()
