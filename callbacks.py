@@ -160,14 +160,25 @@ class Callbacks:
     def open_folder_selector(self, event=None):
         if not self.buttons_active['select_folder']:
             return
+        # Get the button object
+        select_folder_button = self.app.builder.get_object('select_folder_button')
+        
+        # Manually reset the button's state to ensure it visually updates
+        select_folder_button.state(['!pressed'])
+        select_folder_button.state(['!focus'])
+        
+        # Update the UI to reflect this state change
+        self.app.main_window.update_idletasks()
+        
+        # Now proceed with opening the folder selector dialog or connecting to Wi-Fi
+        folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
+        folder_selector_dialog.run()  # This will open the dialog
 
-        # Disable UI elements except for cancel button
-        self.app.disable_ui_elements()
-        self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
+        # # (Optional) Reset the button's state again after the operation, if necessary
+        # select_folder_button.state(['!pressed'])
+        # select_folder_button.state(['!focus'])
+        # self.app.main_window.update_idletasks()
 
-        # Create a new instance of the folder selector window
-        self.folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
-        self.folder_selector_dialog.run()
 
     def close_folder_selector(self):
         # Ensure the folder selector dialog is closed and UI elements are re-enabled

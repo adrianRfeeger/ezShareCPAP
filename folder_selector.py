@@ -109,7 +109,12 @@ class FolderSelectorDialog:
 
     def close_dialog(self, event=None):
         self.dialog.destroy()
-        self.main_window.enable_ui_elements()  # Re-enable UI elements when the dialog is closed
+        # Reset the Select Folder button appearance and re-enable UI elements
+        self.main_window.reset_select_folder_button()
+        self.main_window.enable_ui_elements()
+        
+        # Manually reset the button's visual state
+        self.reset_button_state()
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
@@ -117,10 +122,29 @@ class FolderSelectorDialog:
             item_tag = self.treeview.item(selected_item, 'tags')[0]
             if item_tag == 'folder':
                 folder_url = self.treeview.item(selected_item, 'tags')[1]
-                self.main_window.builder.get_object('url_entry').delete(0, tk.END)
-                self.main_window.builder.get_object('url_entry').insert(0, folder_url)
-                print(f"URL selected: {folder_url}")
+                url_entry = self.main_window.builder.get_object('url_entry')
+                url_entry.delete(0, tk.END)
+                url_entry.insert(0, folder_url)
+                print(f"Setting URL to: {folder_url}")
         self.close_dialog()
+
+    def reset_button_state(self):
+        """Combine all techniques to reset the button's visual state."""
+        select_folder_button = self.main_window.builder.get_object('select_folder_button')
+        
+        # Set relief to raised (normal)
+        select_folder_button.config(relief=tk.RAISED)
+        
+        # Disable and then re-enable the button
+        select_folder_button.config(state=tk.DISABLED)
+        self.main_window.update_idletasks()
+        select_folder_button.config(state=tk.NORMAL)
+        
+        # Force focus to another widget
+        self.main_window.builder.get_object('url_entry').focus_set()
+        
+        # Update the UI
+        self.main_window.update_idletasks()
 
     def on_treeview_select(self, event):
         selected_item = self.treeview.selection()
@@ -130,7 +154,7 @@ class FolderSelectorDialog:
                 self.treeview.selection_remove(selected_item)
 
     def run(self):
-        self.populate_treeview_with_http()  # Populate the Treeview before showing the dialog
+        self.populate_treeview_with_http()
         self.dialog.mainloop()
 
 if __name__ == '__main__':

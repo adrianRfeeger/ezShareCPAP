@@ -7,14 +7,19 @@ import tkinter as tk
 from tkinter import filedialog
 
 def resource_path(relative_path):
-    try:
+    """ Get the absolute path to the resource, works for dev and for PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        # Running in a PyInstaller bundle
         base_path = sys._MEIPASS
-    except Exception:
+    else:
+        # Running in a normal Python environment
         base_path = os.path.abspath(".")
+
     return os.path.join(base_path, relative_path)
 
 def expand_directory_path(directory):
     return os.path.expanduser(directory)
+
 
 def ensure_and_check_disk_access(directory, parent=None):
     expanded_directory = expand_directory_path(directory)
@@ -86,7 +91,7 @@ def disable_ui_elements(builder):
         builder.get_object('restore_defaults_button').config(state=tk.DISABLED)
         builder.get_object('quit_button').config(state=tk.DISABLED)
         builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
-        builder.get_object('folderselectorButton').config(state=tk.DISABLED)
+        builder.get_object('select_folder_button').config(state=tk.DISABLED)
 
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
@@ -102,7 +107,7 @@ def enable_ui_elements(builder):
         builder.get_object('restore_defaults_button').config(state=tk.NORMAL)
         builder.get_object('quit_button').config(state=tk.NORMAL)
         builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
-        builder.get_object('folderselectorButton').config(state=tk.NORMAL)
+        builder.get_object('select_folder_button').config(state=tk.NORMAL)
 
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")

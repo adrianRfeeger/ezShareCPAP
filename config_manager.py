@@ -1,5 +1,5 @@
-import os
 import configparser
+import os
 import logging
 
 DEFAULT_CONFIG = {
@@ -21,8 +21,9 @@ DEFAULT_CONFIG = {
 
 class ConfigManager:
     def __init__(self, config_file):
+        # Disable interpolation by using configparser's BasicInterpolation
+        self.config = configparser.ConfigParser(interpolation=None)
         self.config_file = config_file
-        self.config = configparser.ConfigParser()
         self.load_config()
 
     def load_config(self):

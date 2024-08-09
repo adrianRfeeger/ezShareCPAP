@@ -43,6 +43,14 @@ class EzShareCPAPUI:
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    
+    def reset_select_folder_button(self):
+        """Reset the appearance and state of the Select Folder button."""
+        select_folder_button = self.builder.get_object('select_folder_button')
+        # Move focus away from the button to reset its appearance
+        self.main_window.focus()
+        # Update the UI to ensure the button's state is refreshed
+        self.main_window.update_idletasks()
 
     def disable_ui_elements(self):
         self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
@@ -74,7 +82,8 @@ class EzShareCPAPUI:
             elif msg[0] == 'finished':
                 self.process_finished()
         except queue.Empty:
-            pass
+            pass  # No message to process, continue normally
+
         if self.is_running:
             self.main_window.after(100, self.process_worker_queue)
 
