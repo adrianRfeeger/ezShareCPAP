@@ -78,7 +78,7 @@ class ezShare:
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
-                connect_to_wifi(self)
+                connect_to_wifi(self, self.ssid, self.psk)  # Pass ssid and psk
                 self.update_status(f'Connected to {self.ssid}.')
                 if not self._is_running:
                     raise RuntimeError("Operation cancelled by user.")

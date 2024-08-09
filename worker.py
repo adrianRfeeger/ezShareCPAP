@@ -12,8 +12,7 @@ class EzShareWorker(threading.Thread):
         self.ezshare.set_progress_callback(self.update_progress)
         self.ezshare.set_status_callback(self.update_status)
         try:
-            connect_to_wifi(self.ezshare, self.ezshare.ssid, self.ezshare.psk)
-            self.ezshare.run()
+            self.ezshare.run()  # Ensure ssid and psk are set before this call
         except RuntimeError as e:
             self.update_status(f'Error: {e}', 'error')
         finally:
