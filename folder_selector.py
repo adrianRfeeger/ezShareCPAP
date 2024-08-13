@@ -26,7 +26,7 @@ class FolderSelectorDialog:
         # Initialize the Treeview
         self.treeview = self.builder.get_object('folder_select')
 
-        # Load icons without scaling
+        # Load icons 
         self.folder_icon = tk.PhotoImage(file=resource_path("folder.png"))
         self.file_icon = tk.PhotoImage(file=resource_path("file.png"))
         self.sdcard_icon = tk.PhotoImage(file=resource_path("sdcard.png"))
@@ -128,23 +128,23 @@ class FolderSelectorDialog:
                 print(f"Setting URL to: {folder_url}")
         self.close_dialog()
 
-    def reset_button_state(self):
-        """Combine all techniques to reset the button's visual state."""
-        select_folder_button = self.main_window.builder.get_object('select_folder_button')
+    # def reset_button_state(self):
+    #     """Combine all techniques to reset the button's visual state."""
+    #     select_folder_button = self.main_window.builder.get_object('select_folder_button')
         
-        # Set relief to raised (normal)
-        select_folder_button.config(relief=tk.RAISED)
+    #     # Set relief to raised (normal)
+    #     select_folder_button.config(relief=tk.RAISED)
         
-        # Disable and then re-enable the button
-        select_folder_button.config(state=tk.DISABLED)
-        self.main_window.update_idletasks()
-        select_folder_button.config(state=tk.NORMAL)
+    #     # Disable and then re-enable the button
+    #     select_folder_button.config(state=tk.DISABLED)
+    #     self.main_window.update_idletasks()
+    #     select_folder_button.config(state=tk.NORMAL)
         
-        # Force focus to another widget
-        self.main_window.builder.get_object('url_entry').focus_set()
+    #     # Force focus to another widget
+    #     self.main_window.builder.get_object('url_entry').focus_set()
         
-        # Update the UI
-        self.main_window.update_idletasks()
+    #     # Update the UI
+    #     self.main_window.update_idletasks()
 
     def on_treeview_select(self, event):
         selected_item = self.treeview.selection()

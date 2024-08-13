@@ -170,14 +170,11 @@ class Callbacks:
         # Update the UI to reflect this state change
         self.app.main_window.update_idletasks()
         
-        # Now proceed with opening the folder selector dialog or connecting to Wi-Fi
+        # Now proceed with opening the folder selector dialog
         folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
         folder_selector_dialog.run()  # This will open the dialog
 
-        # # (Optional) Reset the button's state again after the operation, if necessary
-        # select_folder_button.state(['!pressed'])
-        # select_folder_button.state(['!focus'])
-        # self.app.main_window.update_idletasks()
+
 
 
     def close_folder_selector(self):
