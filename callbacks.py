@@ -169,7 +169,7 @@ class Callbacks:
         
         # Update the UI to reflect this state change
         self.app.main_window.update_idletasks()
-        
+        self.app.disable_ui_elements()
         # Now proceed with opening the folder selector dialog
         folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
         folder_selector_dialog.run()  # This will open the dialog
