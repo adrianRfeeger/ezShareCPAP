@@ -13,7 +13,10 @@ from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_e
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
-        self.config_file = pathlib.Path.home() / 'config.ini'
+        # Define the location for the plist file in the Preferences folder
+        self.config_file = pathlib.Path.home() / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.plist'
+
+        # Initialize ConfigManager with the plist file
         self.config_manager = ConfigManager(self.config_file)
         self.ezshare = ezShare()
         self.worker = None

@@ -1,62 +1,64 @@
-import configparser
-import os
-import logging
-
-DEFAULT_CONFIG = {
-    'Settings': {
-        'path': '~/Documents/CPAP_Data/SD_card',
-        'url': 'http://192.168.4.1/dir?dir=A:',
-        'import_oscar': 'False',
-        'quit_after_completion': 'False'
-    },
-    'WiFi': {
-        'ssid': 'ez Share',
-        'psk': '88888888'
-    },
-    'Window': {
-        'x': '100',
-        'y': '100'
-    }
-}
+import plistlib
 
 class ConfigManager:
-    def __init__(self, config_file):
-        # Disable interpolation by using configparser's BasicInterpolation
-        self.config = configparser.ConfigParser(interpolation=None)
-        self.config_file = config_file
+    def __init__(self, plist_file):
+        self.plist_file = plist_file
+        self.config = {}
         self.load_config()
 
     def load_config(self):
-        if not os.path.exists(self.config_file):
-            self.config.read_dict(DEFAULT_CONFIG)
-            self.save_config()
-        else:
-            self.config.read(self.config_file)
+        if self.plist_file.exists():
+            with self.plist_file.open('rb') as f:
+                self.config = plistlib.load(f)
+            # Ensure all default settings are included
             self.merge_default_config()
+        else:
+            self.config = self.get_default_config()
+            self.save_config()
+
+    def save_config(self):
+        with self.plist_file.open('wb') as f:
+            plistlib.dump(self.config, f)
+
+    def restore_defaults(self):
+        self.config = self.get_default_config()
+        self.save_config()
+
+    def get_setting(self, section, key):
+        return self.config.get(section, {}).get(key)
+
+    def set_setting(self, section, key, value):
+        if section in self.config:
+            self.config[section][key] = value
+        else:
+            self.config[section] = {key: value}
+        self.save_config()
+
+    def get_default_config(self):
+        return {
+            'Settings': {
+                'path': '~/Documents/CPAP_Data/SD_card',
+                'url': 'http://192.168.4.1/dir?dir=A:',
+                'import_oscar': False,
+                'quit_after_completion': False
+            },
+            'WiFi': {
+                'ssid': 'ez Share',
+                'psk': '88888888'
+            },
+            'Window': {
+                'x': 100,
+                'y': 100
+            }
+        }
 
     def merge_default_config(self):
-        for section, values in DEFAULT_CONFIG.items():
+        defaults = self.get_default_config()
+        for section, values in defaults.items():
             if section not in self.config:
                 self.config[section] = values
             else:
                 for key, value in values.items():
                     if key not in self.config[section]:
                         self.config[section][key] = value
-
-    def save_config(self):
-        try:
-            with open(self.config_file, 'w') as configfile:
-                self.config.write(configfile)
-        except IOError as e:
-            logging.error(f"Error saving config file: {e}")
-
-    def restore_defaults(self):
-        self.config.read_dict(DEFAULT_CONFIG)
-        self.save_config()
-
-    def get_setting(self, section, key):
-        return self.config.get(section, key)
-
-    def set_setting(self, section, key, value):
-        self.config.set(section, key, value)
         self.save_config()
