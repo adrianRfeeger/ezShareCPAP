@@ -109,12 +109,10 @@ class FolderSelectorDialog:
 
     def close_dialog(self, event=None):
         self.dialog.destroy()
-        # Reset the Select Folder button appearance and re-enable UI elements
-        self.main_window.reset_select_folder_button()
         self.main_window.enable_ui_elements()
         
         # Manually reset the button's visual state
-        self.reset_button_state()
+        # self.reset_button_state()
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()

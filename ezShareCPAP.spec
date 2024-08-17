@@ -8,7 +8,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('icon.icns', '.'), 
-        ('config.ini', '.'),
         ('ezsharecpap.ui', '.'),
         ('file.png', '.'),
         ('folder.png', '.'),
