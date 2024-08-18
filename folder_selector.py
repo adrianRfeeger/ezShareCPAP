@@ -135,7 +135,11 @@ class FolderSelectorDialog:
             item_tag = self.treeview.item(selected_item, 'tags')[0]
             if item_tag == 'folder':
                 folder_url = self.treeview.item(selected_item, 'tags')[1]
+                # Enable the url_entry field
                 url_entry = self.main_window.builder.get_object('url_entry')
+                url_entry.config(state=tk.NORMAL)  # Enable the field
+
+                # Set the URL directly in the entry field
                 url_entry.delete(0, tk.END)
                 url_entry.insert(0, folder_url)
                 print(f"Setting URL to: {folder_url}")
