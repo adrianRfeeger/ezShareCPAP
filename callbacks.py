@@ -1,5 +1,7 @@
 import pathlib
 import webbrowser
+import threading
+import sys
 import tkinter as tk
 import subprocess
 from worker import EzShareWorker
@@ -111,13 +113,17 @@ class Callbacks:
         update_status(self.app, 'Ready.', 'info')
 
     def quit_application(self, event=None):
-        if not self.buttons_active['quit']:
-            return
-
+        # Stop any running worker processes immediately
         if self.app.worker and self.app.worker.is_alive():
-            self.app.worker.stop()
-            self.app.worker.join()
+            threading.Thread(target=self.app.worker.stop).start()
+
+        # Ensure that the UI does not wait for other processes
         self.app.main_window.quit()
+
+        # Optionally forcefully exit the application
+        sys.exit(0)
+
+
 
     def open_oscar_download_page(self, event=None):
         if not self.buttons_active['open_oscar']:
