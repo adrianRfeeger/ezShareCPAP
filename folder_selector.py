@@ -17,6 +17,9 @@ class FolderSelectorDialog:
         self.builder.add_from_file(resource_path('ezsharecpap.ui'))  # Load the UI definition from the XML file
         self.dialog = self.builder.get_object('folder_selector_window', self.master)
 
+        # Initialize the status timer to None
+        self.status_timer = None
+
         # Retrieve the variable from the hidden Entry
         self.folder_path_var = self.builder.get_variable('folder_path_var')
 
@@ -39,15 +42,14 @@ class FolderSelectorDialog:
         # Initialize ezShare instance
         self.ezshare = ezShare()
 
-        # Status timer
-        self.status_timer = None
-
         # Bind the selection event to control selection
         self.treeview.bind('<<TreeviewSelect>>', self.on_treeview_select)
 
     def populate_treeview_with_http(self):
         # Hide the dialog before populating the Treeview
         self.dialog.withdraw()
+        # Set the `is_running` flag to True to suppress the "Ready" status
+        self.main_window.is_running = True
         # Connect to Wi-Fi and traverse HTTP server in a separate thread to avoid blocking the UI
         threading.Thread(target=self._connect_and_populate).start()
 
@@ -55,8 +57,6 @@ class FolderSelectorDialog:
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
         base_url = 'http://192.168.4.1/dir?dir=A:'
-
-        print(f"SSID: {ssid}, PSK: {psk}, Base URL: {base_url}")  # Debugging statement
 
         try:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
@@ -73,12 +73,16 @@ class FolderSelectorDialog:
             self._populate_treeview_node(root_node, base_url)
 
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
+
         except RuntimeError as e:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
             disconnect_from_wifi(self.ezshare)
-            # Show the dialog again after populating the Treeview
             self.main_window.main_window.after(0, self.ensure_treeview_populated)
+
+            # Set the `is_running` flag to False, allowing the "Ready" status to be set
+            self.main_window.is_running = False
+            self.set_status_ready_with_timer()
 
     def _populate_treeview_node(self, parent, url):
         files, dirs = list_dir(self.ezshare, url)
@@ -104,8 +108,19 @@ class FolderSelectorDialog:
         self.dialog.deiconify()
         self.dialog.lift()
 
+    def set_status_ready_with_timer(self):
+        # Cancel any existing timer
+        if self.status_timer:
+            self.main_window.main_window.after_cancel(self.status_timer)
+        
+        # Set a new timer to reset status to "Ready."
+        self.status_timer = self.main_window.main_window.after(5000, self.reset_status)
+
     def reset_status(self):
-        self.main_window.after(0, lambda: update_status(self.main_window, 'Ready.', 'info'))
+        # Reset status to "Ready." if no other operation is in progress
+        if not self.main_window.is_running:
+            update_status(self.main_window, 'Ready.', 'info')
+            self.status_timer = None
 
     def close_dialog(self, event=None):
         self.dialog.destroy()
@@ -125,24 +140,6 @@ class FolderSelectorDialog:
                 url_entry.insert(0, folder_url)
                 print(f"Setting URL to: {folder_url}")
         self.close_dialog()
-
-    # def reset_button_state(self):
-    #     """Combine all techniques to reset the button's visual state."""
-    #     select_folder_button = self.main_window.builder.get_object('select_folder_button')
-        
-    #     # Set relief to raised (normal)
-    #     select_folder_button.config(relief=tk.RAISED)
-        
-    #     # Disable and then re-enable the button
-    #     select_folder_button.config(state=tk.DISABLED)
-    #     self.main_window.update_idletasks()
-    #     select_folder_button.config(state=tk.NORMAL)
-        
-    #     # Force focus to another widget
-    #     self.main_window.builder.get_object('url_entry').focus_set()
-        
-    #     # Update the UI
-    #     self.main_window.update_idletasks()
 
     def on_treeview_select(self, event):
         selected_item = self.treeview.selection()
