@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import pygubu
 import threading
-from wifi_utils import connect_to_wifi, disconnect_from_wifi
+from wifi_utils import connect_to_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
@@ -57,10 +57,15 @@ class FolderSelectorDialog:
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
         base_url = 'http://192.168.4.1/dir?dir=A:'
+        interface = None
 
         try:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
-            connect_to_wifi(self.ezshare, ssid, psk)
+            interface = connect_to_wifi(ssid, psk)
+            
+            if not interface:
+                raise RuntimeError("Failed to find or use a valid Wi-Fi interface.")
+
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Clear the treeview
@@ -77,7 +82,8 @@ class FolderSelectorDialog:
         except RuntimeError as e:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
-            disconnect_from_wifi(self.ezshare)
+            if interface:
+                disconnect_wifi(ssid, interface)
             self.main_window.main_window.after(0, self.ensure_treeview_populated)
 
             # Set the `is_running` flag to False, allowing the "Ready" status to be set
@@ -125,9 +131,6 @@ class FolderSelectorDialog:
     def close_dialog(self, event=None):
         self.dialog.destroy()
         self.main_window.enable_ui_elements()
-        
-        # Manually reset the button's visual state
-        # self.reset_button_state()
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()

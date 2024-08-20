@@ -4,11 +4,14 @@ import requests
 import urllib
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi_utils import connect_to_wifi, disconnect_from_wifi, wifi_connected
+from wifi_utils import connect_to_wifi, disconnect_wifi
 from file_ops import recursive_traversal, list_dir
 
 class ezShare:
     def __init__(self):
+        self.reset_state()
+
+    def reset_state(self):
         self.path = None
         self.url = None
         self.start_time = None
@@ -73,12 +76,14 @@ class ezShare:
             print(message)
         self.update_status(message)
 
-    def run(self, after_callback=None):
+    def run(self):
         self.update_status('Starting process...')
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
-                connect_to_wifi(self, self.ssid, self.psk)  # Pass ssid and psk
+                self.interface_name = connect_to_wifi(self.ssid, self.psk)  # Capture the interface
+                if not self.interface_name:
+                    raise RuntimeError("Failed to find a Wi-Fi interface for connection.")
                 self.update_status(f'Connected to {self.ssid}.')
                 if not self._is_running:
                     raise RuntimeError("Operation cancelled by user.")
@@ -88,8 +93,10 @@ class ezShare:
 
             self.run_after_connection_delay()
 
-        disconnect_from_wifi(self)
+        disconnect_wifi(self.ssid, self.interface_name)  # Disconnect from Wi-Fi after operation
         self.update_status('Disconnected from Wi-Fi.')
+        return self.interface_name  # Return the interface used for connection
+
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
@@ -105,8 +112,8 @@ class ezShare:
         return total_files
 
     def run_after_connection_delay(self):
-        if not wifi_connected(self):
-            self.update_status('Unable to connect automatically, please connect manually.', 'error')
+        if self.path is None:
+            self.update_status('Error: Path is not set.', 'error')
             return
 
         self.path.mkdir(parents=True, exist_ok=True)

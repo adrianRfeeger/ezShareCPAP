@@ -1,67 +1,115 @@
+import os
 import subprocess
 import logging
-import time
+import threading
 
 logger = logging.getLogger(__name__)
+connection_lock = threading.Lock()
 
-def get_interface_name():
-    get_interface_cmd = 'networksetup -listallhardwareports'
+def find_wifi_interface():
+    logger.debug("Finding Wi-Fi interface.")
     try:
-        result = subprocess.run(get_interface_cmd, shell=True, capture_output=True, text=True, check=True)
-        lines = result.stdout.split('\n')
-        for index, line in enumerate(lines):
-            if 'Wi-Fi' in line and (index + 1 < len(lines)):
-                next_line_parts = lines[index + 1].split(':')
-                if len(next_line_parts) == 2:
-                    return next_line_parts[1].strip()
-        logger.error("No Wi-Fi interface found or incorrect parsing.")
-        raise RuntimeError("No Wi-Fi interface found or incorrect parsing.")
-    except subprocess.CalledProcessError as e:
-        logger.error(f'Failed to list hardware ports. Error: {e.stderr}')
-        raise RuntimeError(f'Failed to list hardware ports. Error: {e.stderr}')
+        result = subprocess.run(
+            ["networksetup", "-listallhardwareports"],
+            capture_output=True,
+            text=True
+        )
+        output = result.stdout
+        lines = iter(output.splitlines())
+        for line in lines:
+            if "Wi-Fi" in line:
+                next_line = next(lines)
+                interface = next_line.split(": ")[1]
+                logger.info(f"Wi-Fi interface found: {interface}")
+                return interface
+        logger.error("Wi-Fi interface not found.")
+        return None
+    except Exception as e:
+        logger.exception(f"Exception during Wi-Fi interface lookup: {e}")
+        return None
 
-def connect_to_wifi(ezshare, ssid, psk):
-    interface_name = get_interface_name()
-    if not interface_name:
-        raise RuntimeError("Unable to obtain Wi-Fi interface name.")
-    
-    connect_cmd = f'networksetup -setairportnetwork {interface_name} "{ssid}" "{psk}"'
-    try:
-        result = subprocess.run(connect_cmd, shell=True, capture_output=True, text=True, check=True)
-        if 'Failed' in result.stdout or result.returncode != 0:
-            raise RuntimeError(f'Error connecting to {ssid}. Message: {result.stdout}')
-        ezshare.interface_name = interface_name
-        ezshare.connection_id = ssid
-        ezshare.connected = True
-    except subprocess.CalledProcessError as e:
-        logger.error(f'Failed to connect to Wi-Fi {ssid}. Error: {e.stderr}')
-        raise RuntimeError(f'Failed to connect to Wi-Fi {ssid}. Error: {e.stderr}')
+def connect_to_wifi(ssid, psk, interface=None):
+    with connection_lock:
+        logger.debug(f"Starting Wi-Fi connection process: SSID={ssid}, Interface={interface}")
+        
+        if interface is None:
+            interface = find_wifi_interface()
+        
+        if not interface:
+            logger.error("No Wi-Fi interface found. Cannot connect to Wi-Fi.")
+            raise RuntimeError("Failed to find a Wi-Fi interface for connection.")
 
-def disconnect_from_wifi(ezshare):
-    if not ezshare.connected:
-        logger.debug("No active connection to disconnect.")
-        return
+        try:
+            command = [
+                "networksetup", "-setairportnetwork", interface, ssid, psk
+            ]
+            result = subprocess.run(command, capture_output=True, text=True)
 
-    if not ezshare.connection_id or not ezshare.interface_name:
-        logger.error("Attempt to disconnect without a valid connection ID or interface name.")
-        return
+            if result.returncode == 0:
+                logger.info(f"Wi-Fi connected successfully to SSID={ssid} on interface={interface}.")
+                return interface  # Return the interface used for connection
+            else:
+                logger.error(f"Wi-Fi connection failed: {result.stderr}")
+                raise RuntimeError(f"Wi-Fi connection failed: {result.stderr}")
+        except Exception as e:
+            logger.exception(f"Exception during Wi-Fi connection: {e}")
+            raise RuntimeError(f"Exception during Wi-Fi connection: {e}")
 
-    logger.debug(f"Attempting to disconnect: Interface: {ezshare.interface_name}, Connection ID: {ezshare.connection_id}")
+def disconnect_wifi(ssid, interface):
+    with connection_lock:
+        logger.debug(f"Attempting to disconnect from Wi-Fi SSID={ssid} on interface={interface}.")
+        
+        if not interface:
+            logger.error("No Wi-Fi interface provided. Cannot disconnect from Wi-Fi.")
+            return False
 
-    profile_cmd = f'networksetup -removepreferredwirelessnetwork {ezshare.interface_name} "{ezshare.connection_id}"'
-    try:
-        subprocess.run(profile_cmd, shell=True, capture_output=True, text=True, check=True)
-        subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} off', shell=True, check=True)
-        time.sleep(0.5)  # Delay to ensure the interface is powered down properly
-        subprocess.run(f'networksetup -setairportpower {ezshare.interface_name} on', shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        logger.error(f'Error toggling Wi-Fi interface power. Return code: {e.returncode}, error: {e.stderr}')
-        raise RuntimeError(f'Error toggling Wi-Fi interface power. Return code: {e.returncode}, error: {e.stderr}')
-    finally:
-        ezshare.connected = False
-        ezshare.connection_id = None
+        try:
+            # First, try to remove the specific SSID from the preferred networks
+            remove_command = [
+                "networksetup", "-removepreferredwirelessnetwork", interface, ssid
+            ]
+            result = subprocess.run(remove_command, capture_output=True, text=True)
 
-    logger.info("Disconnected successfully from Wi-Fi.")
+            if result.returncode != 0:
+                logger.error(f"Failed to remove SSID {ssid} from preferred networks: {result.stderr}")
+                return False
 
-def wifi_connected(ezshare):
-    return ezshare.connected
+            # Now explicitly disconnect from the current Wi-Fi network
+            disconnect_command = [
+                "networksetup", "-setairportpower", interface, "off"
+            ]
+            result = subprocess.run(disconnect_command, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"Failed to turn off Wi-Fi: {result.stderr}")
+                return False
+            
+            # Optionally turn Wi-Fi back on if you want to reset the state
+            turn_on_command = [
+                "networksetup", "-setairportpower", interface, "on"
+            ]
+            result = subprocess.run(turn_on_command, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"Failed to turn Wi-Fi back on: {result.stderr}")
+                return False
+
+            logger.info(f"Wi-Fi disconnected successfully from SSID={ssid} on interface={interface}.")
+            return True
+
+        except Exception as e:
+            logger.exception(f"Exception during Wi-Fi disconnection: {e}")
+            return False
+
+def reset_wifi_configuration(interface):
+    with connection_lock:
+        logger.debug(f"Resetting Wi-Fi configuration for interface {interface}.")
+        if not interface:
+            logger.error("No Wi-Fi interface provided. Cannot reset Wi-Fi configuration.")
+            raise RuntimeError("Cannot reset Wi-Fi configuration: No interface provided.")
+
+        try:
+            subprocess.run(["networksetup", "-setairportpower", interface, "off"])
+            subprocess.run(["networksetup", "-setairportpower", interface, "on"])
+            logger.info(f"Wi-Fi configuration reset successfully on interface {interface}.")
+        except Exception as e:
+            logger.exception(f"Exception during Wi-Fi reset: {e}")
+            raise RuntimeError(f"Exception during Wi-Fi reset: {e}")

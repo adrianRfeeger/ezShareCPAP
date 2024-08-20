@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import time
 import pathlib
 import tkinter as tk
 from tkinter import filedialog
@@ -17,16 +16,12 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-def expand_directory_path(directory):
-    return os.path.expanduser(directory)
-
-
 def ensure_and_check_disk_access(directory, parent=None):
-    expanded_directory = expand_directory_path(directory)
-    if not os.path.exists(expanded_directory):
+    expanded_directory = pathlib.Path(directory).expanduser()
+    if not expanded_directory.exists():
         if parent:
             try:
-                os.makedirs(expanded_directory)
+                expanded_directory.mkdir(parents=True)
             except PermissionError:
                 request_disk_access(parent)
                 return False
@@ -36,19 +31,6 @@ def ensure_and_check_disk_access(directory, parent=None):
         os.listdir(expanded_directory)
         return True
     except PermissionError:
-        return False
-
-def ensure_directory_exists_and_writable(path):
-    expanded_path = pathlib.Path(path).expanduser()
-    try:
-        expanded_path.mkdir(parents=True, exist_ok=True)
-        test_file = expanded_path / ".test_writable"
-        with test_file.open('w') as f:
-            f.write("test")
-        test_file.unlink()
-        return True
-    except Exception as e:
-        print(f"Error ensuring directory exists and is writable: {e}")
         return False
 
 def request_disk_access(parent):
@@ -69,17 +51,6 @@ def check_oscar_installed():
         print(f"Error checking OSCAR installation: {e}")
         return False
 
-def retry(func, retries=3, delay=1, backoff=2):
-    for i in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            if i < retries - 1:
-                time.sleep(delay)
-                delay *= backoff
-            else:
-                raise e
-
 def disable_ui_elements(builder):
     try:
         builder.get_object('local_directory_path').config(state=tk.DISABLED)
@@ -92,7 +63,6 @@ def disable_ui_elements(builder):
         builder.get_object('quit_button').config(state=tk.DISABLED)
         builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
         builder.get_object('select_folder_button').config(state=tk.DISABLED)
-
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
 
@@ -108,6 +78,5 @@ def enable_ui_elements(builder):
         builder.get_object('quit_button').config(state=tk.NORMAL)
         builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
         builder.get_object('select_folder_button').config(state=tk.NORMAL)
-
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
