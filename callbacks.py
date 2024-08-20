@@ -4,7 +4,7 @@ import subprocess
 import tkinter as tk
 import logging
 import queue
-import time  # Import time for delay
+import time
 
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
