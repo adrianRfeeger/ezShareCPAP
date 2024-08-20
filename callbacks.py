@@ -158,9 +158,9 @@ class Callbacks:
 
             # Explicitly reset the status using the new reset_status function
             reset_status(self.app)
-
             enable_ui_elements(self.app.builder)
             self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
+            self.app.builder.get_object('progress_bar')['value'] = 0
 
             logging.info("Process cancelled and UI reset. Ready for new operations.")
         except Exception as e:
@@ -168,6 +168,7 @@ class Callbacks:
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
         finally:
             self.last_cancel_time = time.time()  # Update the last cancel time
+            update_status(self.app, 'The process was cancelled by the user.', 'info')
 
     def quit_application(self, event=None):
         logging.info("Quitting application.")
