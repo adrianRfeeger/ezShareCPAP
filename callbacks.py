@@ -3,6 +3,9 @@ import webbrowser
 import subprocess
 import tkinter as tk
 import logging
+import queue
+import time  # Import time for delay
+
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
 from status_manager import update_status, reset_status
@@ -24,6 +27,7 @@ class Callbacks:
             'import_oscar': True,
             'select_folder': True
         }
+        self.last_cancel_time = 0  # Initialize last cancel time for delay
 
     def _set_config(self, settings):
         logging.debug("Setting configuration: %s", settings)
@@ -50,6 +54,10 @@ class Callbacks:
     def start_process(self, event=None):
         logging.info("Attempting to start process.")
 
+        if time.time() - self.last_cancel_time < 2:  # 2-second delay
+            logging.info("Waiting for cleanup to complete before restarting.")
+            return
+
         try:
             # Check if the worker is already running and clean up if needed
             if self.app.worker and self.app.worker.is_alive():
@@ -58,14 +66,14 @@ class Callbacks:
                 self.app.worker.join()
                 logging.info("Previous worker thread stopped successfully.")
 
-            if not self._validate_inputs():
-                logging.warning("Start process aborted: Input validation failed.")
-                return
-
             # Reset state before starting a new process
             logging.info("Resetting state before starting a new process.")
             self.app.is_running = False  # Ensure flag is reset
             self.app.ezshare.reset_state()
+
+            if not self._validate_inputs():
+                logging.warning("Start process aborted: Input validation failed.")
+                return
 
             pathchooser = self.app.builder.get_object('local_directory_path')
             path = pathchooser.cget('path')
@@ -96,11 +104,14 @@ class Callbacks:
                 debug=True
             )
 
-            # Additional logging before starting the worker
-            if self.app.worker and self.app.worker.is_alive():
-                logging.warning("Start process aborted: Previous worker thread is still running.")
-                return
+            # Clear any remaining items in the worker queue
+            while not self.app.worker_queue.empty():
+                try:
+                    self.app.worker_queue.get_nowait()
+                except queue.Empty:
+                    break
 
+            # Additional logging before starting the worker
             logging.info("Starting new worker thread.")
             disable_ui_elements(self.app.builder)
             self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
@@ -115,7 +126,7 @@ class Callbacks:
             self.app.main_window.after(100, self.app.process_worker_queue)
 
         except Exception as e:
-            logging.error("Error occurred during start process: %s", str(e))
+            logging.error(f"Error occurred during start process: {str(e)}")
             update_status(self.app, f"Error: {str(e)}", 'error')
             self.cancel_process()
 
@@ -153,8 +164,10 @@ class Callbacks:
 
             logging.info("Process cancelled and UI reset. Ready for new operations.")
         except Exception as e:
-            logging.error("Error during process cancellation: %s", str(e))
+            logging.error(f"Error during process cancellation: {str(e)}")
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
+        finally:
+            self.last_cancel_time = time.time()  # Update the last cancel time
 
     def quit_application(self, event=None):
         logging.info("Quitting application.")
@@ -165,7 +178,7 @@ class Callbacks:
 
             self.app.main_window.quit()
         except Exception as e:
-            logging.error("Error during application quit: %s", str(e))
+            logging.error(f"Error during application quit: {str(e)}")
             update_status(self.app, f"Quit error: {str(e)}", 'error')
 
     def open_oscar_download_page(self, event=None):
@@ -209,7 +222,7 @@ class Callbacks:
             else:
                 self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
         except Exception as e:
-            logging.error("Error during checkbox update: %s", str(e))
+            logging.error(f"Error during checkbox update: {str(e)}")
             update_status(self.app, f"Checkbox update error: {str(e)}", 'error')
 
     def close_event_handler(self, event=None):
@@ -221,7 +234,7 @@ class Callbacks:
             self.app.builder.get_object('progress_bar')['value'] = 0
             self.app.main_window.quit()
         except Exception as e:
-            logging.error("Error during close event handling: %s", str(e))
+            logging.error(f"Error during close event handling: {str(e)}")
             update_status(self.app, f"Close event error: {str(e)}", 'error')
 
     def open_folder_selector(self, event=None):
@@ -239,7 +252,7 @@ class Callbacks:
             self.folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
             self.folder_selector_dialog.run()
         except Exception as e:
-            logging.error("Error during folder selector opening: %s", str(e))
+            logging.error(f"Error during folder selector opening: {str(e)}")
             update_status(self.app, f"Folder selector error: {str(e)}", 'error')
 
     def close_folder_selector(self):
@@ -249,7 +262,7 @@ class Callbacks:
                 self.folder_selector_dialog.close_dialog()
             enable_ui_elements(self.app.builder)
         except Exception as e:
-            logging.error("Error during folder selector close: %s", str(e))
+            logging.error(f"Error during folder selector close: {str(e)}")
             update_status(self.app, f"Folder selector close error: {str(e)}", 'error')
 
     def import_cpap_data_with_oscar(self, event=None):
@@ -272,5 +285,5 @@ class Callbacks:
         try:
             subprocess.run(["osascript", "-e", script], check=True)
         except subprocess.CalledProcessError as e:
-            logging.error("Error importing CPAP data with OSCAR: %s", e)
+            logging.error(f"Error importing CPAP data with OSCAR: {e}")
             update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
