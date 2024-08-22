@@ -5,6 +5,7 @@ import tkinter as tk
 import logging
 import queue
 import time
+import sys
 
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, check_oscar_installed, disable_ui_elements, enable_ui_elements
@@ -180,18 +181,22 @@ class Callbacks:
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
         finally:
             self.last_cancel_time = time.time()  # Update the last cancel time
-
+            sys.exit(0)
+    
     def quit_application(self, event=None):
         logging.info("Quitting application.")
         try:
-            if self.app.worker and self.app.worker.is_alive():
-                logging.info("Stopping running worker thread before quitting.")
-                self.app.worker.stop()
+            # Ensure the cancel process is called to stop any ongoing operations
+            self.cancel_process()
 
-            self.app.main_window.quit()
+            # Force quit the application
+            sys.exit(0)
         except Exception as e:
             logging.error(f"Error during application quit: {str(e)}")
             update_status(self.app, f"Quit error: {str(e)}", 'error')
+        finally:
+            logging.info("Application has been quit.")
+
 
     def open_oscar_download_page(self, event=None):
         if not self.buttons_active['open_oscar']:
