@@ -18,7 +18,7 @@ class Callbacks:
         self.folder_selector_dialog = None
         self.buttons_active = {
             'start': True,
-            'cancel': True,
+            'cancel': False,  # Initially disabled
             'quit': True,
             'open_oscar': True,
             'load_config': True,
@@ -59,6 +59,10 @@ class Callbacks:
             return
 
         try:
+            # Enable the cancel button when the process starts
+            self.buttons_active['cancel'] = True
+            self.app.builder.get_object('cancel_button').config(state=tk.NORMAL)
+
             # Check if the worker is already running and clean up if needed
             if self.app.worker and self.app.worker.is_alive():
                 logging.warning("Previous worker thread is still running. Stopping it before starting a new process.")
@@ -155,6 +159,10 @@ class Callbacks:
             else:
                 logging.error("No interface name provided, cannot disconnect/reset Wi-Fi.")
 
+            # Mark the cancel button as inactive and disable it
+            self.buttons_active['cancel'] = False
+            self.app.builder.get_object('cancel_button').config(state=tk.DISABLED)
+
             # Close the folder selector dialog if it's open
             if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
                 logging.info("Closing folder selector dialog.")
@@ -163,40 +171,27 @@ class Callbacks:
             # Explicitly reset the status using the new reset_status function
             reset_status(self.app)
             enable_ui_elements(self.app.builder)
-            self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
             self.app.builder.get_object('progress_bar')['value'] = 0
 
             logging.info("Process cancelled and UI reset. Ready for new operations.")
+            update_status(self.app, 'The process was cancelled by the user.', 'info')
         except Exception as e:
             logging.error(f"Error during process cancellation: {str(e)}")
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
         finally:
             self.last_cancel_time = time.time()  # Update the last cancel time
-            update_status(self.app, 'The process was cancelled by the user.', 'info')
 
     def quit_application(self, event=None):
         logging.info("Quitting application.")
         try:
-            # Ensure the cancel process is called to stop any ongoing operations
-            self.cancel_process()
-
-            # After the cancel process, ensure all threads are properly joined and stopped
             if self.app.worker and self.app.worker.is_alive():
                 logging.info("Stopping running worker thread before quitting.")
                 self.app.worker.stop()
-                self.app.worker.join()
 
-            # Ensure the main window and any dialogs are destroyed
-            if self.app.main_window.winfo_exists():
-                self.app.main_window.destroy()
+            self.app.main_window.quit()
         except Exception as e:
             logging.error(f"Error during application quit: {str(e)}")
             update_status(self.app, f"Quit error: {str(e)}", 'error')
-        finally:
-            # Force the application to quit
-            self.app.main_window.quit()
-            logging.info("Application has been quit.")
-
 
     def open_oscar_download_page(self, event=None):
         if not self.buttons_active['open_oscar']:
@@ -261,6 +256,10 @@ class Callbacks:
 
         logging.info("Opening folder selector dialog.")
         try:
+            # Enable the cancel button when the folder selector is opened
+            self.buttons_active['cancel'] = True
+            self.app.builder.get_object('cancel_button').config(state=tk.NORMAL)
+
             select_folder_button = self.app.builder.get_object('select_folder_button')
             select_folder_button.state(['!pressed'])
             select_folder_button.state(['!focus'])
@@ -277,6 +276,11 @@ class Callbacks:
         try:
             if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
                 self.folder_selector_dialog.close_dialog()
+            
+            # Disable the cancel button after closing the dialog
+            self.buttons_active['cancel'] = False
+            self.app.builder.get_object('cancel_button').config(state=tk.DISABLED)
+            
             enable_ui_elements(self.app.builder)
         except Exception as e:
             logging.error(f"Error during folder selector close: {str(e)}")

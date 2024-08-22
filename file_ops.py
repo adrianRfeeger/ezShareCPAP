@@ -45,6 +45,19 @@ def list_dir(ezshare, url):
         logger.error(f"Error fetching directory listing from {url}: {e}")
         return [], []
 
+import bs4
+
+import re
+import bs4
+import datetime
+import urllib.parse
+
+import re
+import bs4
+import datetime
+import urllib.parse
+import logging
+
 def parse_directory_listing(ezshare, soup):
     """
     Parse the HTML directory listing to separate files and directories.
@@ -55,29 +68,51 @@ def parse_directory_listing(ezshare, soup):
     """
     files = []
     dirs = []
-    pre_text = soup.find('pre').decode_contents()
-    lines = pre_text.split('\n')
+    
+    # Find the <pre> tag
+    pre_tag = soup.find('pre')
+    
+    # Check if <pre> tag exists
+    if pre_tag is None:
+        logging.error("No <pre> tag found in the HTML response.")
+        return files, dirs  # Return empty lists if <pre> tag is not found
+    
+    pre_text = pre_tag.decode_contents()  # Extract content from <pre> tag
+    lines = pre_text.split('\n')  # Split the content by lines
 
     for line in lines:
-        if line.strip():
-            parts = line.rsplit(maxsplit=2)
-            modifypart = parts[0].replace('- ', '-0').replace(': ', ':0')
-            regex_pattern = r'\d*-\d*-\d*\s*\d*:\d*:\d*'
-            match = re.search(regex_pattern, modifypart)
-            file_ts = datetime.datetime.strptime(match.group(), '%Y-%m-%d %H:%M:%S').timestamp() if match else 0
+        if line.strip():  # Check if the line is not empty
+            parts = line.rsplit(maxsplit=2)  # Split the line into parts
+            modifypart = parts[0].replace('- ', '-0').replace(': ', ':0')  # Fix timestamp formatting
+            regex_pattern = r'\d*-\d*-\d*\s*\d*:\d*:\d*'  # Regex pattern to match the timestamp
+            match = re.search(regex_pattern, modifypart)  # Search for the timestamp
+            file_ts = datetime.datetime.strptime(match.group(), '%Y-%m-%d %H:%M:%S').timestamp() if match else 0  # Convert to timestamp
+            
+            # Parse the line as HTML to extract the link
             soupline = bs4.BeautifulSoup(line, 'html.parser')
             link = soupline.a
             if link:
-                link_text = link.get_text(strip=True)
-                link_href = link['href']
+                link_text = link.get_text(strip=True)  # Get the link text
+                link_href = link['href']  # Get the href attribute of the link
+                
+                # Ignore files that should be ignored or hidden
                 if link_text in ezshare.ignore or link_text.startswith('.'):
                     continue
+                
+                # Parse the URL
                 parsed_url = urllib.parse.urlparse(link_href)
+                
+                # Check if the link is for a file or directory
                 if parsed_url.path.endswith('download'):
-                    files.append((link_text, parsed_url.query, file_ts))
+                    files.append((link_text, parsed_url.query, file_ts))  # Add file to the list
                 elif parsed_url.path.endswith('dir'):
-                    dirs.append((link_text, link_href))
+                    dirs.append((link_text, link_href))  # Add directory to the list
+    
     return files, dirs
+
+
+
+
 
 def check_files(ezshare_instance, files, url, dir_path, total_files, processed_files, is_running):
     """

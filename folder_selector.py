@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, TclError  # Import TclError here
 import pygubu
 import threading
 from wifi_utils import connect_to_wifi, disconnect_wifi
@@ -7,7 +7,6 @@ from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
 from utils import resource_path
-import urllib.parse
 import logging
 
 class FolderSelectorDialog:
@@ -20,6 +19,9 @@ class FolderSelectorDialog:
 
         # Initialize the status timer to None
         self.status_timer = None
+        self.thread_lock = threading.Lock()  # Lock to ensure thread synchronization
+        self.current_thread = None  # Track the currently running thread
+        self.stop_thread = False  # Flag to stop thread
 
         # Retrieve the variable from the hidden Entry
         self.folder_path_var = self.builder.get_variable('folder_path_var')
@@ -51,8 +53,17 @@ class FolderSelectorDialog:
         self.dialog.withdraw()
         # Set the `is_running` flag to True to suppress the "Ready" status
         self.main_window.is_running = True
-        # Connect to Wi-Fi and traverse HTTP server in a separate thread to avoid blocking the UI
-        threading.Thread(target=self._connect_and_populate).start()
+        # Check if there's already an active thread and stop it
+        with self.thread_lock:
+            if self.current_thread and self.current_thread.is_alive():
+                logging.info(f"Waiting for existing thread {self.current_thread.name} to finish.")
+                self.stop_thread = True
+                self.current_thread.join()  # Wait for the thread to finish
+
+            # Start a new thread with a specific name
+            self.stop_thread = False
+            self.current_thread = threading.Thread(target=self._connect_and_populate, name="FolderSelectorThread")
+            self.current_thread.start()
 
     def _connect_and_populate(self):
         ssid = self.main_window.builder.get_object('ssid_entry').get()
@@ -64,74 +75,77 @@ class FolderSelectorDialog:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
             interface = connect_to_wifi(ssid, psk)
             
-            if not interface:
+            if not interface or self.stop_thread:
                 raise RuntimeError("Failed to find or use a valid Wi-Fi interface.")
 
-            # Check if process was cancelled
-            if not self.main_window.is_running:
-                logging.info("Process was cancelled, aborting.")
-                return
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
-            # Schedule UI-related operations on the main thread
-            self.main_window.main_window.after(0, lambda: self._populate_treeview(base_url, interface))
+            # Clear the treeview only if it exists
+            if self.treeview.winfo_exists() and not self.stop_thread:
+                self.main_window.main_window.after(0, lambda: self.clear_treeview())
+
+            # Populate treeview with HTTP server contents
+            if self.treeview.winfo_exists() and not self.stop_thread:
+                self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
+                root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
+                self.main_window.main_window.after(0, lambda: self._populate_treeview_node(root_node, base_url))
+                self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
 
         except RuntimeError as e:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
         finally:
             if interface:
-                disconnect_wifi(ssid, interface)
+                self.main_window.main_window.after(0, lambda: disconnect_wifi(ssid, interface))
+            self.main_window.main_window.after(0, self.ensure_treeview_populated)
+
+            # Set the `is_running` flag to False, allowing the "Ready" status to be set
+            self.main_window.is_running = False
             self.main_window.main_window.after(0, self.set_status_ready_with_timer)
 
-    def _populate_treeview(self, base_url, interface):
-        # Ensure the Treeview and dialog still exist before proceeding
-        if self.dialog.winfo_exists() and self.treeview.winfo_exists():
-            # Clear the treeview
-            for item in self.treeview.get_children():
-                self.treeview.delete(item)
-
-            # Populate treeview with HTTP server contents
-            update_status(self.main_window, 'Retrieving ez Share SD card directory information...')
-            root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
-            self._populate_treeview_node(root_node, base_url)
-            update_status(self.main_window, 'ez Share SD card directory information retrieved.')
-        else:
-            logging.info("Dialog or Treeview does not exist. Aborting population.")
+    def clear_treeview(self):
+        for item in self.treeview.get_children():
+            self.treeview.delete(item)
 
     def _populate_treeview_node(self, parent, url):
-        if not self.dialog.winfo_exists() or not self.treeview.winfo_exists():
-            logging.info("Dialog or Treeview no longer exists, aborting _populate_treeview_node.")
-            return  # Exit the function if the dialog or Treeview no longer exists
-
-        files, dirs = list_dir(self.ezshare, url)
-
-        for dirname, dir_url, *_ in dirs:
-            full_dir_url = urllib.parse.urljoin(url, dir_url)
-            if not self.treeview.winfo_exists():
-                logging.info("Treeview no longer exists, aborting directory population.")
+        try:
+            # Ensure the Treeview widget still exists before performing operations on it
+            if not self.treeview.winfo_exists() or self.stop_thread:
+                logging.warning("Treeview no longer exists or thread stopped, aborting population.")
                 return
-            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=('folder', full_dir_url))
-            self._populate_treeview_node(node_id, full_dir_url)
 
-        for filename, file_url, *_ in files:
-            full_file_url = urllib.parse.urljoin(url, file_url)
-            if not self.treeview.winfo_exists():
-                logging.info("Treeview no longer exists, aborting file population.")
-                return
-            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=('file', full_file_url))
+            # Fetch files and directories using list_dir
+            files, dirs = list_dir(self.ezshare, url)
+
+            # Populate directories first
+            for dirname in dirs:
+                full_dir_url = url + '/' + dirname[0]  # Access the first element of the tuple
+                node_id = self.treeview.insert(parent, 'end', text=' ' + dirname[0], open=False, image=self.folder_icon, tags=('folder', full_dir_url))
+                self._populate_treeview_node(node_id, full_dir_url)
+
+            # Then populate files
+            for filename in files:
+                full_file_url = url + '/' + filename[0]  # Access the first element of the tuple
+                self.treeview.insert(parent, 'end', text=' ' + filename[0], image=self.file_icon, tags=('file', full_file_url))
+
+        except TclError as e:
+            logging.error(f"Error during Treeview population: {e}")
 
     def ensure_treeview_populated(self):
+        if not self.treeview.winfo_exists():
+            logging.info("Treeview no longer exists, aborting file population.")
+            return
+
         # Check if the treeview has more than one item (excluding the root node)
         if len(self.treeview.get_children('')) > 0:
-            logging.info("Treeview populated correctly.")
-            self.show_dialog()
+            self.main_window.main_window.after(0, self.show_dialog)
         else:
-            logging.info("Treeview not populated yet. Retrying...")
             # Retry after a short delay if not populated yet
-            self.dialog.after(100, self.ensure_treeview_populated)
+            self.main_window.main_window.after(100, self.ensure_treeview_populated)
 
     def show_dialog(self):
-        self.dialog.deiconify()
-        self.dialog.lift()
+        if self.dialog.winfo_exists():
+            self.dialog.deiconify()
+            self.dialog.lift()
 
     def set_status_ready_with_timer(self):
         # Cancel any existing timer
@@ -148,14 +162,13 @@ class FolderSelectorDialog:
             self.status_timer = None
 
     def close_dialog(self, event=None):
-        logging.info("Closing folder selector dialog.")
-        try:
-            if self.dialog.winfo_exists():
-                self.dialog.destroy()
-            self.main_window.enable_ui_elements()
-        except Exception as e:
-            logging.error(f"Error during folder selector close: {str(e)}")
-            update_status(self.main_window, f"Folder selector close error: {str(e)}", 'error')
+        if self.dialog.winfo_exists():
+            self.dialog.destroy()
+        self.main_window.enable_ui_elements()
+
+        # Disable the cancel button after closing the dialog
+        self.main_window.callbacks.buttons_active['cancel'] = False
+        self.main_window.builder.get_object('cancel_button').config(state=tk.DISABLED)
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
@@ -170,7 +183,6 @@ class FolderSelectorDialog:
                 # Set the URL directly in the entry field
                 url_entry.delete(0, tk.END)
                 url_entry.insert(0, folder_url)
-                logging.info(f"Setting URL to: {folder_url}")
         self.close_dialog()
 
     def on_treeview_select(self, event):

@@ -383,6 +383,7 @@
                 </layout>
                 <child>
                   <object class="ttk.Button" id="cancel_button" named="True">
+                    <property name="state">disabled</property>
                     <property name="takefocus">false</property>
                     <property name="text" translatable="yes">Cancel</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="cancel_process" add="" />
