@@ -75,8 +75,9 @@ class FolderSelectorDialog:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
             interface = connect_to_wifi(ssid, psk)
             
-            if not interface or self.stop_thread:
-                raise RuntimeError("Failed to find or use a valid Wi-Fi interface.")
+            # Check if the process was canceled before proceeding
+            if not interface or self.stop_thread or not self.main_window.is_running:
+                raise RuntimeError("Failed to connect or process was canceled.")
 
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
@@ -92,7 +93,9 @@ class FolderSelectorDialog:
                 self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
 
         except RuntimeError as e:
-            self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Failed to connect to Wi-Fi: {e}', 'error'))
+            # Capture 'e' inside the lambda to ensure it is accessible within the lambda's scope
+            error_message = f'Failed to connect to Wi-Fi or process canceled: {e}'
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, error_message, 'error'))
         finally:
             if interface:
                 self.main_window.main_window.after(0, lambda: disconnect_wifi(ssid, interface))

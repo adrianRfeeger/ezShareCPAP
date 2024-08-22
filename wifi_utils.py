@@ -63,7 +63,7 @@ def disconnect_wifi(ssid, interface):
             return False
 
         try:
-            # First, try to remove the specific SSID from the preferred networks
+            # Remove the specific SSID from the preferred networks
             remove_command = [
                 "networksetup", "-removepreferredwirelessnetwork", interface, ssid
             ]
@@ -73,7 +73,7 @@ def disconnect_wifi(ssid, interface):
                 logger.error(f"Failed to remove SSID {ssid} from preferred networks: {result.stderr}")
                 return False
 
-            # Now explicitly disconnect from the current Wi-Fi network
+            # Turn off Wi-Fi to disconnect
             disconnect_command = [
                 "networksetup", "-setairportpower", interface, "off"
             ]
@@ -82,7 +82,7 @@ def disconnect_wifi(ssid, interface):
                 logger.error(f"Failed to turn off Wi-Fi: {result.stderr}")
                 return False
             
-            # Optionally turn Wi-Fi back on if you want to reset the state
+            # Turn Wi-Fi back on to reconnect to the previous network
             turn_on_command = [
                 "networksetup", "-setairportpower", interface, "on"
             ]
@@ -91,7 +91,7 @@ def disconnect_wifi(ssid, interface):
                 logger.error(f"Failed to turn Wi-Fi back on: {result.stderr}")
                 return False
 
-            logger.info(f"Wi-Fi disconnected successfully from SSID={ssid} on interface={interface}.")
+            logger.info(f"Wi-Fi disconnected and reconnected successfully from SSID={ssid} on interface={interface}.")
             return True
 
         except Exception as e:
@@ -106,8 +106,12 @@ def reset_wifi_configuration(interface):
             raise RuntimeError("Cannot reset Wi-Fi configuration: No interface provided.")
 
         try:
+            # Turn off Wi-Fi
             subprocess.run(["networksetup", "-setairportpower", interface, "off"])
+            
+            # Turn Wi-Fi back on to reconnect to the previous network
             subprocess.run(["networksetup", "-setairportpower", interface, "on"])
+            
             logger.info(f"Wi-Fi configuration reset successfully on interface {interface}.")
         except Exception as e:
             logger.exception(f"Exception during Wi-Fi reset: {e}")

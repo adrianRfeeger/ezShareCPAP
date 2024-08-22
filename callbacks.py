@@ -158,7 +158,7 @@ class Callbacks:
                 disconnect_wifi(self.app.ezshare.ssid, self.app.ezshare.interface_name)
                 reset_wifi_configuration(self.app.ezshare.interface_name)
             else:
-                logging.error("No interface name provided, cannot disconnect/reset Wi-Fi.")
+                logging.info("No active Wi-Fi connection to disconnect, or process was canceled before connection.")
 
             # Mark the cancel button as inactive and disable it
             self.buttons_active['cancel'] = False
@@ -181,7 +181,6 @@ class Callbacks:
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
         finally:
             self.last_cancel_time = time.time()  # Update the last cancel time
-            sys.exit(0)
     
     def quit_application(self, event=None):
         logging.info("Quitting application.")
