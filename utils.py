@@ -51,7 +51,7 @@ def check_oscar_installed():
         print(f"Error checking OSCAR installation: {e}")
         return False
 
-def disable_ui_elements(builder):
+def disable_ui_elements(builder, buttons_enabled):
     try:
         builder.get_object('local_directory_path').config(state=tk.DISABLED)
         builder.get_object('url_entry').config(state=tk.DISABLED)
@@ -63,10 +63,14 @@ def disable_ui_elements(builder):
         builder.get_object('quit_button').config(state=tk.DISABLED)
         builder.get_object('configure_wifi_button').config(state=tk.DISABLED)
         builder.get_object('select_folder_button').config(state=tk.DISABLED)
+        
+        # Update buttons_enabled dictionary
+        for button in buttons_enabled.keys():
+            buttons_enabled[button] = False
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")
 
-def enable_ui_elements(builder):
+def enable_ui_elements(builder, buttons_enabled):
     try:
         builder.get_object('local_directory_path').config(state=tk.NORMAL)
         builder.get_object('url_entry').config(state=tk.NORMAL)
@@ -78,5 +82,9 @@ def enable_ui_elements(builder):
         builder.get_object('quit_button').config(state=tk.NORMAL)
         builder.get_object('configure_wifi_button').config(state=tk.NORMAL)
         builder.get_object('select_folder_button').config(state=tk.NORMAL)
+        
+        # Update buttons_enabled dictionary
+        for button in buttons_enabled.keys():
+            buttons_enabled[button] = True
     except Exception as e:
         raise Exception(f"Widget not defined: {e}")

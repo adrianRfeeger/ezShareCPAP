@@ -17,16 +17,16 @@ class Callbacks:
     def __init__(self, app):
         self.app = app
         self.folder_selector_dialog = None
-        self.buttons_active = {
-            'start': True,
-            'cancel': False,  # Initially disabled
-            'quit': True,
-            'open_oscar': True,
-            'load_config': True,
-            'save': True,
-            'restore_defaults': True,
-            'import_oscar': True,
-            'select_folder': True
+        self.buttons_enabled = {
+            'start_button': True,
+            'cancel_button': False,  # Initially disabled
+            'quit_button': True,
+            'download_oscar_link': True,
+            'save_button': True,
+            'restore_defaults_button': True,
+            'import_oscar_checkbox': True,
+            'select_folder_button': True,
+            'configure_wifi_button': True
         }
         self.last_cancel_time = 0  # Initialize last cancel time for delay
 
@@ -53,6 +53,10 @@ class Callbacks:
         return True
 
     def start_process(self, event=None):
+        if not self.buttons_enabled['start_button']:
+            logging.info("Start process aborted: Start button is not enabled.")
+            return
+
         logging.info("Attempting to start process.")
 
         if time.time() - self.last_cancel_time < 2:  # 2-second delay
@@ -60,8 +64,9 @@ class Callbacks:
             return
 
         try:
-            # Enable the cancel button when the process starts
-            self.buttons_active['cancel'] = True
+            # Disable all buttons except the cancel button
+            disable_ui_elements(self.app.builder, self.buttons_enabled)
+            self.buttons_enabled['cancel_button'] = True
             self.app.builder.get_object('cancel_button').config(state=tk.NORMAL)
 
             # Check if the worker is already running and clean up if needed
@@ -78,6 +83,8 @@ class Callbacks:
 
             if not self._validate_inputs():
                 logging.warning("Start process aborted: Input validation failed.")
+                # Re-enable UI elements since validation failed
+                enable_ui_elements(self.app.builder, self.buttons_enabled)
                 return
 
             pathchooser = self.app.builder.get_object('local_directory_path')
@@ -116,12 +123,8 @@ class Callbacks:
                 except queue.Empty:
                     break
 
-            # Additional logging before starting the worker
+            # Create and start the worker thread
             logging.info("Starting new worker thread.")
-            disable_ui_elements(self.app.builder)
-            self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
-
-            # Create and name the worker thread
             self.app.worker = EzShareWorker(self.app.ezshare, self.app.worker_queue, name="EzShareWorkerThread")
             self.app.worker.start()
 
@@ -136,12 +139,12 @@ class Callbacks:
             self.cancel_process()
 
     def cancel_process(self, event=None):
+        if not self.buttons_enabled['cancel_button']:
+            logging.info("Cancel process aborted: Cancel button is not enabled.")
+            return
+
         logging.info("Attempting to cancel process.")
         try:
-            if not self.buttons_active['cancel']:
-                logging.warning("Cancel process aborted: Cancel button is not active.")
-                return
-
             # Stop and cleanup the worker thread
             if self.app.worker and self.app.worker.is_alive():
                 logging.info("Stopping running worker thread.")
@@ -161,17 +164,12 @@ class Callbacks:
                 logging.info("No active Wi-Fi connection to disconnect, or process was canceled before connection.")
 
             # Mark the cancel button as inactive and disable it
-            self.buttons_active['cancel'] = False
+            self.buttons_enabled['cancel_button'] = False
             self.app.builder.get_object('cancel_button').config(state=tk.DISABLED)
 
-            # Close the folder selector dialog if it's open
-            if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
-                logging.info("Closing folder selector dialog.")
-                self.folder_selector_dialog.close_dialog()
+            # Re-enable all other UI elements after cancellation
+            enable_ui_elements(self.app.builder, self.buttons_enabled)
 
-            # Explicitly reset the status using the new reset_status function
-            reset_status(self.app)
-            enable_ui_elements(self.app.builder)
             self.app.builder.get_object('progress_bar')['value'] = 0
 
             logging.info("Process cancelled and UI reset. Ready for new operations.")
@@ -181,8 +179,31 @@ class Callbacks:
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
         finally:
             self.last_cancel_time = time.time()  # Update the last cancel time
-    
+
+    def process_finished(self):
+        logging.info("Process finished")
+        self.app.is_running = False
+
+        # Re-enable UI elements after the process is finished
+        enable_ui_elements(self.app.builder, self.buttons_enabled)
+        self.builder.get_object('progress_bar')['value'] = 0
+
+        # Disable the cancel button
+        self.buttons_enabled['cancel_button'] = False
+        self.app.builder.get_object('cancel_button').config(state=tk.DISABLED)
+
+        if self.app.quit_var.get():
+            self.app.main_window.quit()
+        else:
+            self.update_status('Ready.', 'info')
+        if self.app.import_oscar_var.get():
+            self.import_cpap_data_with_oscar()
+
     def quit_application(self, event=None):
+        if not self.buttons_enabled['quit_button']:
+            logging.info("Quit application aborted: Quit button is not enabled.")
+            return
+
         logging.info("Quitting application.")
         try:
             # Ensure the cancel process is called to stop any ongoing operations
@@ -196,31 +217,30 @@ class Callbacks:
         finally:
             logging.info("Application has been quit.")
 
-
     def open_oscar_download_page(self, event=None):
-        if not self.buttons_active['open_oscar']:
-            logging.warning("Open OSCAR download page aborted: Button is not active.")
+        if not self.buttons_enabled['download_oscar_link']:
+            logging.warning("Open OSCAR download page aborted: Button is not enabled.")
             return
         logging.info("Opening OSCAR download page.")
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
     def load_config_ui(self, event=None):
-        if not self.buttons_active['load_config']:
-            logging.warning("Load configuration aborted: Load button is not active.")
+        if not self.buttons_enabled['load_config']:
+            logging.warning("Load configuration aborted: Load button is not enabled.")
             return
         logging.info("Loading configuration UI.")
         self.app.load_config()
 
     def save_config(self, event=None):
-        if not self.buttons_active['save']:
-            logging.warning("Save configuration aborted: Save button is not active.")
+        if not self.buttons_enabled['save_button']:
+            logging.warning("Save configuration aborted: Save button is not enabled.")
             return
         logging.info("Saving configuration.")
         self.app.save_config(event)
 
     def restore_defaults(self, event=None):
-        if not self.buttons_active['restore_defaults']:
-            logging.warning("Restore defaults aborted: Restore defaults button is not active.")
+        if not self.buttons_enabled['restore_defaults_button']:
+            logging.warning("Restore defaults aborted: Restore defaults button is not enabled.")
             return
         logging.info("Restoring default settings.")
         self.app.config_manager.restore_defaults()
@@ -254,21 +274,21 @@ class Callbacks:
             update_status(self.app, f"Close event error: {str(e)}", 'error')
 
     def open_folder_selector(self, event=None):
-        if not self.buttons_active['select_folder']:
-            logging.warning("Open folder selector aborted: Button is not active.")
+        if not self.buttons_enabled['select_folder_button']:
+            logging.warning("Open folder selector aborted: Button is not enabled.")
             return
 
         logging.info("Opening folder selector dialog.")
         try:
-            # Enable the cancel button when the folder selector is opened
-            self.buttons_active['cancel'] = True
+            # Disable all buttons except the cancel button
+            disable_ui_elements(self.app.builder, self.buttons_enabled)
+            self.buttons_enabled['cancel_button'] = True
             self.app.builder.get_object('cancel_button').config(state=tk.NORMAL)
 
             select_folder_button = self.app.builder.get_object('select_folder_button')
             select_folder_button.state(['!pressed'])
             select_folder_button.state(['!focus'])
             self.app.main_window.update_idletasks()
-            disable_ui_elements(self.app.builder)
             self.folder_selector_dialog = FolderSelectorDialog(self.app.main_window, self.app)
             self.folder_selector_dialog.run()
         except Exception as e:
@@ -276,23 +296,27 @@ class Callbacks:
             update_status(self.app, f"Folder selector error: {str(e)}", 'error')
 
     def close_folder_selector(self):
+        if not self.buttons_enabled['cancel_button']:
+            logging.warning("Close folder selector aborted: Cancel button is not enabled.")
+            return
+
         logging.info("Closing folder selector dialog.")
         try:
             if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
                 self.folder_selector_dialog.close_dialog()
             
             # Disable the cancel button after closing the dialog
-            self.buttons_active['cancel'] = False
+            self.buttons_enabled['cancel_button'] = False
             self.app.builder.get_object('cancel_button').config(state=tk.DISABLED)
             
-            enable_ui_elements(self.app.builder)
+            enable_ui_elements(self.app.builder, self.buttons_enabled)
         except Exception as e:
             logging.error(f"Error during folder selector close: {str(e)}")
             update_status(self.app, f"Folder selector close error: {str(e)}", 'error')
 
     def import_cpap_data_with_oscar(self, event=None):
-        if not self.buttons_active['import_oscar']:
-            logging.warning("Import CPAP data with OSCAR aborted: Button is not active.")
+        if not self.buttons_enabled['import_oscar_checkbox']:
+            logging.warning("Import CPAP data with OSCAR aborted: Button is not enabled.")
             return
 
         logging.info("Importing CPAP data with OSCAR.")

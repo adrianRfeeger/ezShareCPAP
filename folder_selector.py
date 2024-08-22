@@ -1,12 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, TclError  # Import TclError here
+from tkinter import ttk, TclError
 import pygubu
 import threading
 from wifi_utils import connect_to_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
-from utils import resource_path
+from utils import resource_path, enable_ui_elements, disable_ui_elements
 import logging
 
 class FolderSelectorDialog:
@@ -53,6 +53,11 @@ class FolderSelectorDialog:
         self.dialog.withdraw()
         # Set the `is_running` flag to True to suppress the "Ready" status
         self.main_window.is_running = True
+        # Disable all buttons except the cancel button
+        disable_ui_elements(self.main_window.builder, self.main_window.callbacks.buttons_enabled)
+        self.main_window.callbacks.buttons_enabled['cancel_button'] = True
+        self.main_window.builder.get_object('cancel_button').config(state=tk.NORMAL)
+
         # Check if there's already an active thread and stop it
         with self.thread_lock:
             if self.current_thread and self.current_thread.is_alive():
@@ -120,15 +125,15 @@ class FolderSelectorDialog:
             files, dirs = list_dir(self.ezshare, url)
 
             # Populate directories first
-            for dirname in dirs:
-                full_dir_url = url + '/' + dirname[0]  # Access the first element of the tuple
-                node_id = self.treeview.insert(parent, 'end', text=' ' + dirname[0], open=False, image=self.folder_icon, tags=('folder', full_dir_url))
+            for dirname, dir_url in dirs:
+                full_dir_url = url + '/' + dirname
+                node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=('folder', full_dir_url))
                 self._populate_treeview_node(node_id, full_dir_url)
 
             # Then populate files
-            for filename in files:
-                full_file_url = url + '/' + filename[0]  # Access the first element of the tuple
-                self.treeview.insert(parent, 'end', text=' ' + filename[0], image=self.file_icon, tags=('file', full_file_url))
+            for filename, file_url, _ in files:
+                full_file_url = url + '/' + filename
+                self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=('file', full_file_url))
 
         except TclError as e:
             logging.error(f"Error during Treeview population: {e}")
@@ -167,10 +172,12 @@ class FolderSelectorDialog:
     def close_dialog(self, event=None):
         if self.dialog.winfo_exists():
             self.dialog.destroy()
-        self.main_window.enable_ui_elements()
+        
+        # Re-enable UI elements after the folder selector is closed
+        enable_ui_elements(self.main_window.builder, self.main_window.callbacks.buttons_enabled)
 
-        # Disable the cancel button after closing the dialog
-        self.main_window.callbacks.buttons_active['cancel'] = False
+        # Disable the cancel button
+        self.main_window.callbacks.buttons_enabled['cancel_button'] = False
         self.main_window.builder.get_object('cancel_button').config(state=tk.DISABLED)
 
     def confirm_selection(self, event=None):
@@ -198,9 +205,3 @@ class FolderSelectorDialog:
     def run(self):
         self.populate_treeview_with_http()
         self.dialog.mainloop()
-
-if __name__ == '__main__':
-    root = tk.Tk()
-    root.withdraw()  # Optional: Hide the main window
-    fsd = FolderSelectorDialog(root, root)
-    fsd.run()

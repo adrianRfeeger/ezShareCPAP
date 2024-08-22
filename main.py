@@ -57,10 +57,10 @@ class EzShareCPAPUI:
         self.builder.get_object('start_button').config(command=lambda: self.handle_button_click('start_button', self.callbacks.start_process))
         self.builder.get_object('cancel_button').config(command=lambda: self.handle_button_click('cancel_button', self.callbacks.cancel_process))
         self.builder.get_object('quit_button').config(command=lambda: self.handle_button_click('quit_button', self.callbacks.quit_application))
-        self.builder.get_object('save_button').config(command=lambda: self.handle_button_click('save_button', self.save_config))
+        self.builder.get_object('save_button').config(command=lambda: self.handle_button_click('save_button', self.callbacks.save_config))
         self.builder.get_object('restore_defaults_button').config(command=lambda: self.handle_button_click('restore_defaults_button', self.callbacks.restore_defaults))
         self.builder.get_object('select_folder_button').config(command=lambda: self.handle_button_click('select_folder_button', self.callbacks.open_folder_selector))
-        self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.callbacks.ez_share_config))
+        self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.ez_share_config))
 
         # Bind the label (not a button) with an event
         self.builder.get_object('download_oscar_link').bind("<Button-1>", lambda event: self.handle_button_click('download_oscar_link', self.callbacks.open_oscar_download_page))

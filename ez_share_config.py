@@ -29,7 +29,7 @@ class EzShareConfig:
         update_status(self.app, 'Connecting to ez Share Wi-Fi...', 'info')
         self._set_ezshare_params()
         disable_ui_elements(self.app.builder)
-        self.app.builder.get_object('cancel_button').config(default=tk.ACTIVE)
+        self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
         
         threading.Thread(target=self._connect_and_configure).start()
 
