@@ -9,7 +9,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access, disable_ui_elements, enable_ui_elements, resource_path
+from utils import ensure_and_check_disk_access, resource_path
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -41,29 +41,57 @@ class EzShareCPAPUI:
         self.callbacks = Callbacks(self)
         self.ezshare_config = EzShareConfig(self)
 
+        # Initialize button states
+        self.button_states = {
+            'start_button': True,
+            'cancel_button': False,  # Initially disabled
+            'quit_button': True,
+            'download_oscar_link': True,
+            'save_button': True,
+            'restore_defaults_button': True,
+            'select_folder_button': True,
+            'configure_wifi_button': True
+        }
+
+        # Configure buttons with their commands
+        self.builder.get_object('start_button').config(command=lambda: self.handle_button_click('start_button', self.callbacks.start_process))
+        self.builder.get_object('cancel_button').config(command=lambda: self.handle_button_click('cancel_button', self.callbacks.cancel_process))
+        self.builder.get_object('quit_button').config(command=lambda: self.handle_button_click('quit_button', self.callbacks.quit_application))
+        self.builder.get_object('save_button').config(command=lambda: self.handle_button_click('save_button', self.save_config))
+        self.builder.get_object('restore_defaults_button').config(command=lambda: self.handle_button_click('restore_defaults_button', self.callbacks.restore_defaults))
+        self.builder.get_object('select_folder_button').config(command=lambda: self.handle_button_click('select_folder_button', self.callbacks.open_folder_selector))
+        self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.callbacks.ez_share_config))
+
+        # Bind the label (not a button) with an event
+        self.builder.get_object('download_oscar_link').bind("<Button-1>", lambda event: self.handle_button_click('download_oscar_link', self.callbacks.open_oscar_download_page))
+
         self.load_config()
         self.callbacks.update_checkboxes()
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-    
-    def reset_select_folder_button(self):
-        """Reset the appearance and state of the Select Folder button."""
-        select_folder_button = self.builder.get_object('select_folder_button')
-        # Move focus away from the button to reset its appearance
-        self.main_window.focus()
-        # Update the UI to ensure the button's state is refreshed
-        self.main_window.update_idletasks()
 
-    def disable_ui_elements(self):
-        self.callbacks.buttons_active = {key: False for key in self.callbacks.buttons_active}
-        disable_ui_elements(self.builder)
-        self.builder.get_object('cancel_button').config(default=tk.ACTIVE)
+    def handle_button_click(self, button_name, action):
+        if self.button_states.get(button_name, False):
+            action()
+        else:
+            logging.info(f"Button '{button_name}' is disabled and was clicked.")
+
+    def enable_button(self, button_name):
+        self.button_states[button_name] = True
+        self.builder.get_object(button_name).config(state=tk.NORMAL)
+
+    def disable_button(self, button_name):
+        self.button_states[button_name] = False
+        self.builder.get_object(button_name).config(state=tk.DISABLED)
 
     def enable_ui_elements(self):
-        self.callbacks.buttons_active = {key: True for key in self.callbacks.buttons_active}
-        enable_ui_elements(self.builder)
-        self.builder.get_object('cancel_button').config(default=tk.NORMAL)
+        for button in self.button_states:
+            self.enable_button(button)
+
+    def disable_ui_elements(self):
+        for button in self.button_states:
+            self.disable_button(button)
 
     def update_status(self, message, message_type='info'):
         logging.debug(f"Attempting to update status to '{message}' with type '{message_type}'")
@@ -114,7 +142,7 @@ class EzShareCPAPUI:
             logging.error(f"Error loading config: {e}")
 
     def save_config(self, event=None):
-        if not self.callbacks.buttons_active['save']:
+        if not self.button_states['save_button']:
             return
         try:
             self.apply_ui_to_config()
