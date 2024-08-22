@@ -149,9 +149,13 @@ class Callbacks:
             self.app.is_running = False
 
             # Ensure that Wi-Fi is disconnected and resources are cleaned up
-            disconnect_wifi(self.app.ezshare.ssid, self.app.ezshare.interface_name)
-            reset_wifi_configuration(self.app.ezshare.interface_name)  # Ensure full cleanup of Wi-Fi configurations
+            if self.app.ezshare.interface_name:
+                disconnect_wifi(self.app.ezshare.ssid, self.app.ezshare.interface_name)
+                reset_wifi_configuration(self.app.ezshare.interface_name)
+            else:
+                logging.error("No interface name provided, cannot disconnect/reset Wi-Fi.")
 
+            # Close the folder selector dialog if it's open
             if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
                 logging.info("Closing folder selector dialog.")
                 self.folder_selector_dialog.close_dialog()
@@ -173,14 +177,26 @@ class Callbacks:
     def quit_application(self, event=None):
         logging.info("Quitting application.")
         try:
+            # Ensure the cancel process is called to stop any ongoing operations
+            self.cancel_process()
+
+            # After the cancel process, ensure all threads are properly joined and stopped
             if self.app.worker and self.app.worker.is_alive():
                 logging.info("Stopping running worker thread before quitting.")
                 self.app.worker.stop()
+                self.app.worker.join()
 
-            self.app.main_window.quit()
+            # Ensure the main window and any dialogs are destroyed
+            if self.app.main_window.winfo_exists():
+                self.app.main_window.destroy()
         except Exception as e:
             logging.error(f"Error during application quit: {str(e)}")
             update_status(self.app, f"Quit error: {str(e)}", 'error')
+        finally:
+            # Force the application to quit
+            self.app.main_window.quit()
+            logging.info("Application has been quit.")
+
 
     def open_oscar_download_page(self, event=None):
         if not self.buttons_active['open_oscar']:
