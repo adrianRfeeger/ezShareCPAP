@@ -38,9 +38,6 @@ class EzShareCPAPUI:
         self.builder.get_object('quit_checkbox').config(variable=self.quit_var)
         self.builder.get_object('import_oscar_checkbox').config(variable=self.import_oscar_var)
 
-        self.callbacks = Callbacks(self)
-        self.ezshare_config = EzShareConfig(self)
-
         # Initialize button states
         self.button_states = {
             'start_button': True,
@@ -53,6 +50,9 @@ class EzShareCPAPUI:
             'configure_wifi_button': True
         }
 
+        self.callbacks = Callbacks(self)
+        self.ezshare_config = EzShareConfig(self)
+
         # Configure buttons with their commands
         self.builder.get_object('start_button').config(command=lambda: self.handle_button_click('start_button', self.callbacks.start_process))
         self.builder.get_object('cancel_button').config(command=lambda: self.handle_button_click('cancel_button', self.callbacks.cancel_process))
@@ -60,13 +60,13 @@ class EzShareCPAPUI:
         self.builder.get_object('save_button').config(command=lambda: self.handle_button_click('save_button', self.callbacks.save_config))
         self.builder.get_object('restore_defaults_button').config(command=lambda: self.handle_button_click('restore_defaults_button', self.callbacks.restore_defaults))
         self.builder.get_object('select_folder_button').config(command=lambda: self.handle_button_click('select_folder_button', self.callbacks.open_folder_selector))
-        self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.ez_share_config))
+        self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.ezshare_config.configure_ezshare))
 
         # Bind the label (not a button) with an event
         self.builder.get_object('download_oscar_link').bind("<Button-1>", lambda event: self.handle_button_click('download_oscar_link', self.callbacks.open_oscar_download_page))
 
         self.load_config()
-        self.callbacks.update_checkboxes()
+        self.callbacks.update_ui_checkboxes()  # Updated method call
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -80,9 +80,12 @@ class EzShareCPAPUI:
         else:
             logging.info(f"Button '{button_name}' is disabled and was clicked.")
 
-    def update_button_state(self, button_name, state):
+    def update_button_state(self, button_name, state, is_default=False):
         self.button_states[button_name] = state
-        self.builder.get_object(button_name).config(state=tk.NORMAL if state else tk.DISABLED)
+        button = self.builder.get_object(button_name)
+        button.config(state=tk.NORMAL if state else tk.DISABLED)
+        if is_default:
+            button.config(default=tk.ACTIVE)
 
     def enable_ui_elements(self):
         for button in self.button_states:

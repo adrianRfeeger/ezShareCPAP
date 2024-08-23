@@ -4,7 +4,6 @@ import requests
 import subprocess
 from tkinter import messagebox
 from wifi_utils import connect_to_wifi
-from utils import disable_ui_elements, enable_ui_elements
 from status_manager import update_status
 import logging
 
@@ -21,15 +20,15 @@ class EzShareConfig:
             update_status(self.app, 'Configuration cancelled.', 'info')
             logging.info("Configuration cancelled by user.")
             self.app.is_running = False
-            self.app.enable_ui_elements()
-            self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
-            update_status(self.app, 'Ready.', 'info')
+            self.app.enable_ui_elements()  # Re-enable UI elements
+            self.app.update_button_state('start_button', True, is_default=True)
+            self.app.update_status('Ready.', 'info')
             return
 
         update_status(self.app, 'Connecting to ez Share Wi-Fi...', 'info')
         self._set_ezshare_params()
-        disable_ui_elements(self.app.builder)
-        self.app.builder.get_object('cancel_button').config(default=tk.NORMAL)
+        self.app.disable_ui_elements()  # Disable UI elements during process
+        self.app.update_button_state('cancel_button', True, is_default=True)
         
         threading.Thread(target=self._connect_and_configure).start()
 
@@ -44,8 +43,7 @@ class EzShareConfig:
         except RuntimeError as e:
             logging.error(f"Error during Wi-Fi connection: {e}")
             self.app.main_window.after(0, lambda: update_status(self.app, f'Error: {e}', 'error'))
-            self.app.main_window.after(0, self.app.enable_ui_elements)
-            self.app.is_running = False
+            self.app.main_window.after(0, self._reset_ui_after_error)
 
     def _set_ezshare_params(self):
         self.app.ezshare.set_params(
@@ -71,8 +69,7 @@ class EzShareConfig:
         else:
             update_status(self.app, 'Failed to connect to the ez Share Wi-Fi.', 'error')
             logging.warning("Failed to connect to Wi-Fi.")
-            enable_ui_elements(self.app.builder)
-            self.app.is_running = False
+            self._reset_ui_after_error()
 
     def _open_configuration_page(self):
         logging.info("Connected to ez Share WiFi for configuration.")
@@ -86,10 +83,14 @@ class EzShareConfig:
             else:
                 update_status(self.app, f'Failed to reach the HTTP server. Status code: {response.status_code}', 'error')
                 logging.error(f"HTTP server not reachable. Status code: {response.status_code}")
-                enable_ui_elements(self.app.builder)
-                self.app.is_running = False
+                self._reset_ui_after_error()
         except requests.RequestException as e:
             update_status(self.app, f'Failed to reach the HTTP server. Error: {e}', 'error')
             logging.error(f"Failed to reach HTTP server: {e}")
-            enable_ui_elements(self.app.builder)
-            self.app.is_running = False
+            self._reset_ui_after_error()
+
+    def _reset_ui_after_error(self):
+        self.app.enable_ui_elements()  # Re-enable UI elements after error
+        self.app.update_button_state('start_button', True, is_default=True)
+        self.app.is_running = False
+        self.app.update_status('Ready.', 'info')
