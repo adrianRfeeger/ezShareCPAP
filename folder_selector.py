@@ -6,7 +6,7 @@ from wifi_utils import connect_to_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
-from utils import resource_path, enable_ui_elements, disable_ui_elements
+from utils import resource_path
 import logging
 
 class FolderSelectorDialog:
@@ -54,9 +54,8 @@ class FolderSelectorDialog:
         # Set the `is_running` flag to True to suppress the "Ready" status
         self.main_window.is_running = True
         # Disable all buttons except the cancel button
-        disable_ui_elements(self.main_window.builder, self.main_window.callbacks.buttons_enabled)
-        self.main_window.callbacks.buttons_enabled['cancel_button'] = True
-        self.main_window.builder.get_object('cancel_button').config(state=tk.NORMAL)
+        self.main_window.disable_ui_elements()
+        self.main_window.update_button_state('cancel_button', True)
 
         # Check if there's already an active thread and stop it
         with self.thread_lock:
@@ -174,11 +173,10 @@ class FolderSelectorDialog:
             self.dialog.destroy()
         
         # Re-enable UI elements after the folder selector is closed
-        enable_ui_elements(self.main_window.builder, self.main_window.callbacks.buttons_enabled)
+        self.main_window.enable_ui_elements()
 
         # Disable the cancel button
-        self.main_window.callbacks.buttons_enabled['cancel_button'] = False
-        self.main_window.builder.get_object('cancel_button').config(state=tk.DISABLED)
+        self.main_window.update_button_state('cancel_button', False)
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
