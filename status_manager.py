@@ -26,8 +26,9 @@ def update_status(app, message, message_type='info', target_app=None):
                 logging.info("Setting new status timer to reset status to 'Ready.'")
                 target.status_timer = get_window(target).after(5000, lambda: reset_status(target))
             elif message_type == 'info' and message == 'Ready.':
-                logging.info("Setting status to 'Ready.' and ensuring no active timers.")
-                target.status_timer = None
+                if not target.is_running:  # Ensure not overriding ongoing operations
+                    logging.info("Setting status to 'Ready.' and ensuring no active timers.")
+                    target.status_timer = None
 
 def set_status_colour(app, message_type):
     if message_type == 'error':
@@ -59,5 +60,6 @@ def reset_status(app):
             except Exception as e:
                 logging.error(f"Failed to cancel status timer during reset: {e}")
             app.status_timer = None
-        app.builder.get_object('status_label')['text'] = 'Ready.'
-        set_status_colour(app, 'info')
+        if not app.is_running:
+            app.builder.get_object('status_label')['text'] = 'Ready.'
+            set_status_colour(app, 'info')

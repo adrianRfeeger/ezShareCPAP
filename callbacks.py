@@ -47,6 +47,7 @@ class Callbacks:
             return
 
         logging.info("Attempting to start process.")
+        self.app.is_running = True  # Ensure the "Ready" status is suppressed
 
         if time.time() - self.last_cancel_time < 2:  # 2-second delay
             logging.info("Waiting for cleanup to complete before restarting.")
