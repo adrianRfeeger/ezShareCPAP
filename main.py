@@ -71,27 +71,30 @@ class EzShareCPAPUI:
         
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+        # Initialize button states after loading config
+        self.initialize_button_states()
+
     def handle_button_click(self, button_name, action):
         if self.button_states.get(button_name, False):
             action()
         else:
             logging.info(f"Button '{button_name}' is disabled and was clicked.")
 
-    def enable_button(self, button_name):
-        self.button_states[button_name] = True
-        self.builder.get_object(button_name).config(state=tk.NORMAL)
-
-    def disable_button(self, button_name):
-        self.button_states[button_name] = False
-        self.builder.get_object(button_name).config(state=tk.DISABLED)
+    def update_button_state(self, button_name, state):
+        self.button_states[button_name] = state
+        self.builder.get_object(button_name).config(state=tk.NORMAL if state else tk.DISABLED)
 
     def enable_ui_elements(self):
         for button in self.button_states:
-            self.enable_button(button)
+            self.update_button_state(button, True)
 
     def disable_ui_elements(self):
         for button in self.button_states:
-            self.disable_button(button)
+            self.update_button_state(button, False)
+
+    def initialize_button_states(self):
+        for button_name in self.button_states:
+            self.update_button_state(button_name, self.button_states[button_name])
 
     def update_status(self, message, message_type='info'):
         logging.debug(f"Attempting to update status to '{message}' with type '{message_type}'")
@@ -130,26 +133,12 @@ class EzShareCPAPUI:
         if self.import_oscar_var.get():
             self.callbacks.import_cpap_data_with_oscar()
 
-    def run(self):
-        logging.info("Starting main application loop")
-        self.main_window.mainloop()
-
     def load_config(self):
         try:
             self.config_manager.load_config()
             self.apply_config_to_ui()
         except Exception as e:
             logging.error(f"Error loading config: {e}")
-
-    def save_config(self, event=None):
-        if not self.button_states['save_button']:
-            return
-        try:
-            self.apply_ui_to_config()
-            self.config_manager.save_config()
-            self.update_status('Settings have been saved.', 'info')
-        except Exception as e:
-            logging.error(f"Error saving config: {e}")
 
     def apply_config_to_ui(self):
         self.builder.get_object("local_directory_path").configure(path=self.config_manager.get_setting('Settings', 'path'))
@@ -162,39 +151,9 @@ class EzShareCPAPUI:
         self.quit_var.set(self.config_manager.get_setting('Settings', 'quit_after_completion') == 'True')
         self.import_oscar_var.set(self.config_manager.get_setting('Settings', 'import_oscar') == 'True')
 
-    def apply_ui_to_config(self):
-        self.config_manager.set_setting('Settings', 'path', self.builder.get_object('local_directory_path').cget('path'))
-        self.config_manager.set_setting('Settings', 'url', self.builder.get_object('url_entry').get())
-        self.config_manager.set_setting('WiFi', 'ssid', self.builder.get_object('ssid_entry').get())
-        self.config_manager.set_setting('WiFi', 'psk', self.builder.get_object('psk_entry').get())
-        self.config_manager.set_setting('Settings', 'quit_after_completion', str(self.quit_var.get()))
-        self.config_manager.set_setting('Settings', 'import_oscar', str(self.import_oscar_var.get()))
-
-    def start_process(self, event=None):
-        self.is_running = True
-        self.callbacks.start_process(event)
-
-    def cancel_process(self, event=None):
-        self.callbacks.cancel_process(event)
-
-    def quit_application(self, event=None):
-        self.callbacks.quit_application(event)
-
-    def open_oscar_download_page(self, event=None):
-        self.callbacks.open_oscar_download_page(event)
-
-    def restore_defaults(self, event=None):
-        self.callbacks.restore_defaults(event)
-    
-    def open_folder_selector(self, event=None):
-        self.callbacks.open_folder_selector(event)
-
-    def import_cpap_data_with_oscar(self, event=None):
-        self.callbacks.import_cpap_data_with_oscar(event)
-
-    def ez_share_config(self, event=None):
-        self.is_running = True
-        self.ezshare_config.configure_ezshare(event)
+    def run(self):
+        logging.info("Starting main application loop")
+        self.main_window.mainloop()
 
 if __name__ == "__main__":
     app = EzShareCPAPUI()
