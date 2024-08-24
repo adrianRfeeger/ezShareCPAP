@@ -133,23 +133,28 @@ class Callbacks:
 
         logging.info("Attempting to cancel process.")
         try:
-            # Stop and cleanup the worker thread
+            # Stop and cleanup the worker thread if it's running
             if self.app.worker and self.app.worker.is_alive():
                 logging.info("Stopping running worker thread.")
                 self.app.worker.stop()
                 self.app.worker.join()  # Ensure the worker thread has fully terminated
                 logging.info("Worker thread stopped successfully.")
+                self.app.worker = None
+
+            # Handle cancellation of the folder selector dialog
+            if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
+                logging.info("Closing folder selector dialog.")
+                self.folder_selector_dialog.close_dialog()
+
+            # Handle cancellation of the ez_share_config process
+            if self.app.ezshare_config.is_connected:
+                logging.info("Cancelling ez Share configuration.")
+                self.app.ezshare_config.cancel_ezshare_config()
+            else:
+                logging.info("No active ez Share configuration to cancel, or process was canceled before connection.")
 
             logging.info("Resetting state after cancellation.")
-            self.app.worker = None
             self.app.is_running = False
-
-            # Ensure that Wi-Fi is disconnected and resources are cleaned up
-            if self.app.ezshare.interface_name:
-                disconnect_wifi(self.app.ezshare.ssid, self.app.ezshare.interface_name)
-                reset_wifi_configuration(self.app.ezshare.interface_name)
-            else:
-                logging.info("No active Wi-Fi connection to disconnect, or process was canceled before connection.")
 
             self.app.builder.get_object('progress_bar')['value'] = 0
 
