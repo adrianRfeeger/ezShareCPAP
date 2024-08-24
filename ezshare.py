@@ -82,6 +82,7 @@ class ezShare:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
                 self.interface_name = connect_to_wifi(self.ssid, self.psk)  # Capture the interface
+                logging.info(f"Interface Name Set: {self.interface_name}")  # Log the interface name
                 if not self.interface_name or not self._is_running:
                     raise RuntimeError("Failed to find a Wi-Fi interface for connection or process was canceled.")
                 self.update_status(f'Connected to {self.ssid}.')

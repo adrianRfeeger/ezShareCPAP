@@ -1,96 +1,101 @@
-import threading
-import tkinter as tk
-import requests
-import subprocess
-from tkinter import messagebox
-from wifi_utils import connect_to_wifi
-from status_manager import update_status
+import webbrowser
 import logging
+import time
+from tkinter import messagebox
+from wifi_utils import connect_to_wifi, disconnect_wifi, reset_wifi_configuration
+from status_manager import update_status
+from utils import set_process_button_states, set_default_button_states
 
 class EzShareConfig:
     def __init__(self, app):
         self.app = app
-        logging.basicConfig(level=logging.DEBUG)
+        self.connected_interface = None
 
-    def configure_ezshare(self, event=None):
-        logging.debug("Configuring ezShare...")
-        msg = messagebox.askokcancel('ez Share Config',
-                                     "To configure the ez Share SD card, the settings page will be opened with your default browser. Ensure that you update the settings in ezShareCPAP with any changes that you make to the SSID or PSK. P.S. the default password is 'admin'.")
-        if not msg:
-            update_status(self.app, 'Configuration cancelled.', 'info')
+    def configure_ezshare(self):
+        # Confirm with the user before proceeding
+        if not messagebox.askokcancel(
+            "Configure ez Share",
+            "To configure the ez Share SD card, the settings page will be opened with your default browser. Ensure that you update the settings in ezShareCPAP with any changes that you make to the SSID or PSK.\n\nP.S. the default password is 'admin'."
+        ):
             logging.info("Configuration cancelled by user.")
-            self.app.is_running = False
-            self.app.enable_ui_elements()  # Re-enable UI elements
-            self.app.update_button_state('start_button', True, is_default=True)
-            self.app.update_status('Ready.', 'info')
             return
 
-        update_status(self.app, 'Connecting to ez Share Wi-Fi...', 'info')
-        self._set_ezshare_params()
-        self.app.disable_ui_elements()  # Disable UI elements during process
-        self.app.update_button_state('cancel_button', True, is_default=True)
-        
-        threading.Thread(target=self._connect_and_configure).start()
+        # Retrieve SSID and PSK from the UI
+        ssid = self.app.builder.get_object('ssid_entry').get()
+        psk = self.app.builder.get_object('psk_entry').get()
 
-    def _connect_and_configure(self):
+        logging.debug(f"SSID retrieved: {ssid}")
+        logging.debug(f"PSK retrieved: {psk}")
+
+        if not ssid or not psk:
+            logging.error("SSID or PSK is missing. Cannot connect to Wi-Fi.")
+            update_status(self.app, "SSID or PSK is missing.", "error")
+            return
+
+        # Update the UI to reflect that a process is running
+        set_process_button_states(self.app)
+        self.app.is_running = True
+
+        update_status(self.app, "Connecting to ez Share Wi-Fi...", "info")
+
         try:
-            logging.debug("Starting connection to Wi-Fi...")
-            connect_to_wifi(self.app.ezshare, self.app.builder.get_object('ssid_entry').get(), self.app.builder.get_object('psk_entry').get())
-            if self.app.is_running:  # Check if still running before proceeding
-                self.app.main_window.after(self.app.ezshare.connection_delay * 1000, self._check_wifi_connection)
-            else:
-                logging.info("Configuration was cancelled during the connection delay.")
-        except RuntimeError as e:
-            logging.error(f"Error during Wi-Fi connection: {e}")
-            self.app.main_window.after(0, lambda: update_status(self.app, f'Error: {e}', 'error'))
-            self.app.main_window.after(0, self._reset_ui_after_error)
+            # Attempt to connect to the Wi-Fi network
+            self.connected_interface = connect_to_wifi(ssid, psk)
+            logging.info(f"Interface Name Set: {self.connected_interface}")
+            update_status(self.app, "Connected to ez Share WiFi for configuration.", "info")
 
-    def _set_ezshare_params(self):
-        self.app.ezshare.set_params(
-            path=self.app.config_manager.get_setting('Settings', 'path'),
-            url=self.app.config_manager.get_setting('Settings', 'url'),
-            start_time=None,
-            show_progress=True,
-            verbose=True,
-            overwrite=False,
-            keep_old=False,
-            ssid=self.app.builder.get_object('ssid_entry').get(),
-            psk=self.app.builder.get_object('psk_entry').get(),
-            ignore=[],
-            retries=3,
-            connection_delay=5,
-            debug=True
-        )
-        logging.debug("Parameters set for ezShare.")
+            # Attempt to open the configuration page
+            config_url = "http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356"
+            for attempt in range(3):
+                try:
+                    logging.info(f"Attempt {attempt + 1} to open the configuration page...")
+                    webbrowser.open(config_url)
+                    update_status(self.app, "HTTP server is reachable. Opening the configuration page...", "info")
+                    break
+                except Exception as e:
+                    logging.warning(f"Attempt {attempt + 1} failed: {e}")
+                    if attempt == 2:
+                        update_status(self.app, f"Failed to reach the configuration page: {e}", "error")
+                        raise e
 
-    def _check_wifi_connection(self):
-        if self.app.ezshare.wifi_connected():
-            self._open_configuration_page()
-        else:
-            update_status(self.app, 'Failed to connect to the ez Share Wi-Fi.', 'error')
-            logging.warning("Failed to connect to Wi-Fi.")
-            self._reset_ui_after_error()
+        except Exception as e:
+            logging.error(f"Error during configuration: {str(e)}")
+            update_status(self.app, f"Error: {str(e)}", "error")
+            self.cancel_ezshare_config()
 
-    def _open_configuration_page(self):
-        logging.info("Connected to ez Share WiFi for configuration.")
-        update_status(self.app, 'Connected to ez Share WiFi for configuration.', 'info')
-        try:
-            response = requests.get('http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356', timeout=5)
-            if response.status_code == 200:
-                update_status(self.app, 'HTTP server is reachable. Opening the configuration page...', 'info')
-                subprocess.run(['open', 'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'])
-                logging.info("Configuration page opened.")
-            else:
-                update_status(self.app, f'Failed to reach the HTTP server. Status code: {response.status_code}', 'error')
-                logging.error(f"HTTP server not reachable. Status code: {response.status_code}")
-                self._reset_ui_after_error()
-        except requests.RequestException as e:
-            update_status(self.app, f'Failed to reach the HTTP server. Error: {e}', 'error')
-            logging.error(f"Failed to reach HTTP server: {e}")
-            self._reset_ui_after_error()
+        def cancel_ezshare_config(self):
+            logging.info("Attempting to cancel ez Share configuration.")
+            
+            # Check if there's an ongoing process
+            if not self.app.is_running:
+                logging.info("No ongoing process to cancel.")
+                return
 
-    def _reset_ui_after_error(self):
-        self.app.enable_ui_elements()  # Re-enable UI elements after error
-        self.app.update_button_state('start_button', True, is_default=True)
-        self.app.is_running = False
-        self.app.update_status('Ready.', 'info')
+            try:
+                # Stop the worker thread if it's running
+                if self.app.worker and self.app.worker.is_alive():
+                    logging.info("Stopping running worker thread.")
+                    self.app.worker.stop()
+                    self.app.worker.join()  # Ensure the worker thread has fully terminated
+                    logging.info("Worker thread stopped successfully.")
+
+                # Disconnect from Wi-Fi if connected
+                if self.connected_interface:
+                    logging.info(f"Disconnecting from Wi-Fi SSID={self.app.builder.get_object('ssid_entry').get()} on interface={self.connected_interface}")
+                    disconnect_wifi(self.app.builder.get_object('ssid_entry').get(), self.connected_interface)
+                    reset_wifi_configuration(self.connected_interface)
+                    logging.info("Wi-Fi configuration reset successfully.")
+                    self.connected_interface = None
+                else:
+                    logging.info("No active Wi-Fi connection to disconnect, or process was canceled before connection.")
+
+                # Reset the UI and internal states
+                self.app.is_running = False
+                set_default_button_states(self.app)
+                self.app.builder.get_object('progress_bar')['value'] = 0
+                logging.info("Process cancelled and UI reset. Ready for new operations.")
+                update_status(self.app, "Configuration cancelled.", "info")
+
+            except Exception as e:
+                logging.error(f"Error during process cancellation: {str(e)}")
+                update_status(self.app, f"Cancellation error: {str(e)}", "error")
