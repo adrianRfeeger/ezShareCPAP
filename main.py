@@ -9,14 +9,15 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access, resource_path, set_default_button_states, set_process_button_states, get_button_state
+from utils import ensure_and_check_disk_access, resource_path, initialize_button_states, set_default_button_states, set_process_button_states, get_button_state
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
-        # Define the location for the plist file in the Preferences folder
-        self.config_file = pathlib.Path.home() / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.plist'
+        # Initialize button states
+        initialize_button_states(self)
 
-        # Initialize ConfigManager with the plist file
+        # Other initializations
+        self.config_file = pathlib.Path.home() / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.plist'
         self.config_manager = ConfigManager(self.config_file)
         self.ezshare = ezShare()
         self.worker = None
@@ -38,7 +39,7 @@ class EzShareCPAPUI:
         self.builder.get_object('quit_checkbox').config(variable=self.quit_var)
         self.builder.get_object('import_oscar_checkbox').config(variable=self.import_oscar_var)
 
-        # Initialize button states using the utils function
+        # Set default button states after initializing the button state dictionary
         set_default_button_states(self)
 
         self.callbacks = Callbacks(self)
@@ -63,7 +64,7 @@ class EzShareCPAPUI:
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def handle_button_click(self, button_name, action):
-        if get_button_state(button_name)['enabled']:
+        if get_button_state(self, button_name)['enabled']:
             action()
         else:
             logging.info(f"Button '{button_name}' is disabled and was clicked.")

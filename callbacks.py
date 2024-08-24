@@ -6,9 +6,8 @@ import logging
 import queue
 import time
 import sys
-
 from worker import EzShareWorker
-from utils import ensure_and_check_disk_access, check_oscar_installed, set_default_button_states, set_process_button_states, get_button_state
+from utils import ensure_and_check_disk_access, get_button_state, set_process_button_states, set_default_button_states, check_oscar_installed
 from status_manager import update_status
 from wifi_utils import disconnect_wifi, reset_wifi_configuration
 from folder_selector import FolderSelectorDialog
@@ -39,7 +38,7 @@ class Callbacks:
         return True
 
     def start_process(self, event=None):
-        if not get_button_state('start_button')['enabled']:
+        if not get_button_state(self.app, 'start_button')['enabled']:
             logging.info("Start process aborted: Start button is not enabled.")
             return
 
@@ -128,7 +127,7 @@ class Callbacks:
             self.cancel_process()
 
     def cancel_process(self, event=None):
-        if not get_button_state('cancel_button')['enabled']:
+        if not get_button_state(self.app, 'cancel_button')['enabled']:
             logging.info("Cancel process aborted: Cancel button is not enabled.")
             return
 
@@ -157,6 +156,9 @@ class Callbacks:
             logging.info("Process cancelled and UI reset. Ready for new operations.")
             update_status(self.app, 'Ready.', 'info')  # This will reset the button states
 
+            # Reset button states to default after cancellation
+            set_default_button_states(self.app)
+
         except Exception as e:
             logging.error(f"Error during process cancellation: {str(e)}")
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
@@ -177,7 +179,7 @@ class Callbacks:
             self.import_cpap_data_with_oscar()
 
     def quit_application(self, event=None):
-        if not get_button_state('quit_button')['enabled']:
+        if not get_button_state(self.app, 'quit_button')['enabled']:
             logging.info("Quit application aborted: Quit button is not enabled.")
             return
 
@@ -194,15 +196,52 @@ class Callbacks:
         finally:
             logging.info("Application has been quit.")
 
+    def save_config(self, event=None):
+        """
+        Save the current configuration to the configuration file.
+        """
+        logging.info("Saving configuration.")
+        try:
+            pathchooser = self.app.builder.get_object('local_directory_path')
+            path = pathchooser.cget('path')
+            url = self.app.builder.get_object('url_entry').get()
+            ssid = self.app.builder.get_object('ssid_entry').get()
+            psk = self.app.builder.get_object('psk_entry').get()
+
+            expanded_path = pathlib.Path(path).expanduser()
+            self.app.config_manager.set_setting('Settings', 'path', str(expanded_path))
+            self.app.config_manager.set_setting('Settings', 'url', url)
+            self.app.config_manager.set_setting('WiFi', 'ssid', ssid)
+            self.app.config_manager.set_setting('WiFi', 'psk', psk)
+            self.app.config_manager.save_config()
+
+            update_status(self.app, 'Configuration saved successfully.', 'info')
+        except Exception as e:
+            logging.error(f"Error saving configuration: {str(e)}")
+            update_status(self.app, f"Error saving configuration: {str(e)}", 'error')
+
+    def restore_defaults(self, event=None):
+        """
+        Restore the default configuration settings.
+        """
+        logging.info("Restoring default configuration.")
+        try:
+            self.app.config_manager.restore_defaults()
+            self.app.apply_config_to_ui()
+            update_status(self.app, 'Default configuration restored.', 'info')
+        except Exception as e:
+            logging.error(f"Error restoring default configuration: {str(e)}")
+            update_status(self.app, f"Error restoring default configuration: {str(e)}", 'error')
+
     def open_oscar_download_page(self, event=None):
-        if not get_button_state('open_oscar')['enabled']:
+        if not get_button_state(self.app, 'open_oscar')['enabled']:
             logging.warning("Open OSCAR download page aborted: Button is not enabled.")
             return
         logging.info("Opening OSCAR download page.")
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
     def open_folder_selector(self, event=None):
-        if not get_button_state('select_folder_button')['enabled']:
+        if not get_button_state(self.app, 'select_folder_button')['enabled']:
             logging.warning("Open folder selector aborted: Button is not enabled.")
             return
 
@@ -235,7 +274,7 @@ class Callbacks:
             update_status(self.app, f"Folder selector close error: {str(e)}", 'error')
 
     def import_cpap_data_with_oscar(self, event=None):
-        if not get_button_state('import_oscar_checkbox')['enabled']:
+        if not get_button_state(self.app, 'import_oscar_checkbox')['enabled']:
             logging.warning("Import CPAP data with OSCAR aborted: Button is not enabled.")
             return
 

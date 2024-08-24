@@ -6,93 +6,71 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-# Global dictionary to keep track of button states
-button_states = {
-    'start_button': {'enabled': True, 'is_default': True},
-    'cancel_button': {'enabled': False, 'is_default': False},
-    'quit_button': {'enabled': True, 'is_default': False},
-    'save_button': {'enabled': True, 'is_default': False},
-    'restore_defaults_button': {'enabled': True, 'is_default': False},
-    'import_oscar_checkbox': {'enabled': True, 'is_default': False},
-    'quit_checkbox': {'enabled': True, 'is_default': False},
-    'select_folder_button': {'enabled': True, 'is_default': False},
-    'configure_wifi_button': {'enabled': True, 'is_default': False},
-    'local_directory_path': {'enabled': True, 'is_default': False}
-}
+import tkinter as tk
+import logging
 
-def update_button_state(app, button_name, enabled=True, is_default=False, visible=True):
+def initialize_button_states(app):
+    """
+    Initialize the button states with default values in the application.
+    """
+    app.button_states = {
+        'start_button': {'enabled': True, 'default': True, 'visible': True},
+        'cancel_button': {'enabled': False, 'default': False, 'visible': True},
+        'quit_button': {'enabled': True, 'default': True, 'visible': True},
+        'save_button': {'enabled': True, 'default': True, 'visible': True},
+        'restore_defaults_button': {'enabled': True, 'default': True, 'visible': True},
+        'import_oscar_checkbox': {'enabled': True, 'default': True, 'visible': True},
+        'quit_checkbox': {'enabled': True, 'default': True, 'visible': True},
+        'select_folder_button': {'enabled': True, 'default': True, 'visible': True},
+        'configure_wifi_button': {'enabled': True, 'default': True, 'visible': True},
+        'local_directory_path': {'enabled': True, 'default': True, 'visible': True}
+    }
+
+def update_button_state(app, button_name, enabled=None, is_default=None, visible=None):
     """
     Update the state, visibility, and default status of a button in the UI and its state in the global dictionary.
-
-    Parameters:
-    app (tk.Widget): The main application object that contains the UI components.
-    button_name (str): The name of the button widget.
-    enabled (bool): Whether the button should be enabled or disabled.
-    is_default (bool): Whether the button should be set as the default button.
-    visible (bool): Whether the button should be visible or hidden.
     """
     button = app.builder.get_object(button_name)
+    state_info = app.button_states[button_name]
 
-    # Update the button state in the UI
-    if enabled:
-        button.config(state=tk.NORMAL)
-    else:
-        button.config(state=tk.DISABLED)
+    if enabled is not None:
+        state_info['enabled'] = enabled
+        button.config(state=tk.NORMAL if enabled else tk.DISABLED)
 
-    # Apply the default option only if the widget is a Button
-    if isinstance(button, tk.Button):
-        if is_default:
-            button.config(default=tk.ACTIVE)
+    # Apply the default option only if the widget is a tk.Button
+    if isinstance(button, tk.Button) and is_default is not None:
+        state_info['default'] = is_default
+        button.config(default=tk.ACTIVE if is_default else tk.NORMAL)
+
+    if visible is not None:
+        state_info['visible'] = visible
+        if visible:
+            button.pack()  # Show the button using pack()
         else:
-            button.config(default=tk.NORMAL)
+            button.pack_forget()  # Hide the button using pack_forget()
 
-    if visible:
-        button.pack()  # Show the button using pack()
-    else:
-        button.pack_forget()  # Hide the button using pack_forget()
-
-    # Update the global state dictionary
-    button_states[button_name] = {'enabled': enabled, 'is_default': is_default}
-    logging.info(f"Updated button '{button_name}' - Enabled: {enabled}, Default: {is_default}, Visible: {visible}")
-
-def set_button_states(app, states):
-    """
-    Set the states of multiple buttons at once.
-
-    Parameters:
-    app (tk.Widget): The main application object that contains the UI components.
-    states (dict): A dictionary where keys are button names and values are dicts with 'enabled' and 'is_default' keys.
-    """
-    for button_name, state_info in states.items():
-        update_button_state(app, button_name, enabled=state_info['enabled'], is_default=state_info['is_default'])
+    logging.info(f"Updated button '{button_name}' - Enabled: {state_info['enabled']}, Default: {state_info.get('default')}, Visible: {state_info['visible']}")
 
 def set_default_button_states(app):
     """
     Reset all buttons to their default states as defined in the global dictionary.
     """
     logging.info("Setting all button states to their default values.")
-    set_button_states(app, button_states)
+    for button_name, state_info in app.button_states.items():
+        update_button_state(app, button_name, enabled=state_info['default'], is_default=state_info['default'])
 
 def set_process_button_states(app):
     """
     Set all buttons to their states during a major process, disabling all but the cancel button.
     """
-    process_button_states = {
-        'start_button': {'enabled': False, 'is_default': False},
-        'cancel_button': {'enabled': True, 'is_default': True},
-        'quit_button': {'enabled': False, 'is_default': False},
-        'save_button': {'enabled': False, 'is_default': False},
-        'restore_defaults_button': {'enabled': False, 'is_default': False},
-        'import_oscar_checkbox': {'enabled': False, 'is_default': False},
-        'quit_checkbox': {'enabled': False, 'is_default': False},
-        'select_folder_button': {'enabled': False, 'is_default': False},
-        'configure_wifi_button': {'enabled': False, 'is_default': False},
-        'local_directory_path': {'enabled': False, 'is_default': False}
-    }
     logging.info("Setting all button states for a process (disabling most except the cancel button).")
-    set_button_states(app, process_button_states)
+    for button_name in app.button_states:
+        if button_name == 'cancel_button':
+            update_button_state(app, button_name, enabled=True, is_default=True)
+        else:
+            update_button_state(app, button_name, enabled=False, is_default=False)
 
-def get_button_state(button_name):
+def get_button_state(app, button_name):
     """
     Retrieve the current state of a button from the global dictionary.
 
@@ -102,7 +80,7 @@ def get_button_state(button_name):
     Returns:
     dict: The current state of the button.
     """
-    return button_states.get(button_name, {'enabled': False, 'is_default': False})
+    return app.button_states.get(button_name, {'enabled': False, 'default': False, 'visible': True})
 
 def ensure_and_check_disk_access(directory, parent=None):
     """

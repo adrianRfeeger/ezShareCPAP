@@ -6,7 +6,7 @@ from wifi_utils import connect_to_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
-from utils import resource_path
+from utils import resource_path, update_button_state  # Import the utility function
 import logging
 
 class FolderSelectorDialog:
@@ -55,7 +55,7 @@ class FolderSelectorDialog:
         self.main_window.is_running = True
         # Disable all buttons except the cancel button
         self.main_window.disable_ui_elements()
-        self.main_window.update_button_state('cancel_button', True)
+        update_button_state(self.main_window, 'cancel_button', enabled=True)
 
         # Check if there's already an active thread and stop it
         with self.thread_lock:
@@ -176,7 +176,7 @@ class FolderSelectorDialog:
         self.main_window.enable_ui_elements()
 
         # Disable the cancel button
-        self.main_window.update_button_state('cancel_button', False)
+        update_button_state(self.main_window, 'cancel_button', enabled=False)
 
     def confirm_selection(self, event=None):
         selected_item = self.treeview.selection()
