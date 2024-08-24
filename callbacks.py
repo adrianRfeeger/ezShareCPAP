@@ -8,8 +8,8 @@ import time
 import sys
 
 from worker import EzShareWorker
-from utils import ensure_and_check_disk_access, check_oscar_installed
-from status_manager import update_status, reset_status
+from utils import ensure_and_check_disk_access, check_oscar_installed, set_default_button_states, set_process_button_states, get_button_state
+from status_manager import update_status
 from wifi_utils import disconnect_wifi, reset_wifi_configuration
 from folder_selector import FolderSelectorDialog
 
@@ -19,46 +19,8 @@ class Callbacks:
         self.folder_selector_dialog = None
         self.last_cancel_time = 0  # Initialize last cancel time for delay
 
-        # Define button states for different contexts
-        self.button_states_context = {
-            'default': {
-                'start_button': (True, True),  # Enabled, Default
-                'cancel_button': (False, False),  # Disabled, Not Default
-                'quit_button': (True, False),
-                'download_oscar_link': (True, False),
-                'save_button': (True, False),
-                'restore_defaults_button': (True, False),
-                'import_oscar_checkbox': (True, False),
-                'select_folder_button': (True, False),
-                'configure_wifi_button': (True, False),
-            },
-            'process_running': {
-                'start_button': (False, False),
-                'cancel_button': (True, True),  # Enabled, Default
-                'quit_button': (False, False),
-                'download_oscar_link': (False, False),
-                'save_button': (False, False),
-                'restore_defaults_button': (False, False),
-                'import_oscar_checkbox': (False, False),
-                'select_folder_button': (False, False),
-                'configure_wifi_button': (False, False),
-            },
-        }
-
         # Initialize button states to default
-        self._set_button_states('default')
-
-    def _set_button_states(self, context):
-        """Update the button states based on the provided context."""
-        states = self.button_states_context.get(context, {})
-        for button, (enabled, is_default) in states.items():
-            self.app.update_button_state(button, enabled, is_default)
-
-    def _set_config(self, settings):
-        logging.debug("Setting configuration: %s", settings)
-        for section, items in settings.items():
-            for key, value in items.items():
-                self.app.config_manager.set_setting(section, key, value)
+        set_default_button_states(self.app)
 
     def _validate_inputs(self):
         path = self.app.builder.get_object('local_directory_path').cget('path')
@@ -77,7 +39,7 @@ class Callbacks:
         return True
 
     def start_process(self, event=None):
-        if not self.app.button_states['start_button']:
+        if not get_button_state('start_button')['enabled']:
             logging.info("Start process aborted: Start button is not enabled.")
             return
 
@@ -90,7 +52,7 @@ class Callbacks:
 
         try:
             # Update button states for running process
-            self._set_button_states('process_running')
+            set_process_button_states(self.app)
 
             # Check if the worker is already running and clean up if needed
             if self.app.worker and self.app.worker.is_alive():
@@ -107,7 +69,7 @@ class Callbacks:
             if not self._validate_inputs():
                 logging.warning("Start process aborted: Input validation failed.")
                 # Re-enable UI elements since validation failed
-                self._set_button_states('default')
+                update_status(self.app, 'Ready.', 'info')  # This will reset the button states
                 return
 
             pathchooser = self.app.builder.get_object('local_directory_path')
@@ -121,7 +83,11 @@ class Callbacks:
                 'Settings': {'path': str(expanded_path), 'url': url, 'quit_after_completion': str(self.app.quit_var.get())},
                 'WiFi': {'ssid': ssid, 'psk': psk}
             }
-            self._set_config(settings)
+            self.app.config_manager.set_setting('Settings', 'path', str(expanded_path))
+            self.app.config_manager.set_setting('Settings', 'url', url)
+            self.app.config_manager.set_setting('WiFi', 'ssid', ssid)
+            self.app.config_manager.set_setting('WiFi', 'psk', psk)
+            self.app.config_manager.save_config()
 
             self.app.ezshare.set_params(
                 path=expanded_path,
@@ -162,7 +128,7 @@ class Callbacks:
             self.cancel_process()
 
     def cancel_process(self, event=None):
-        if not self.app.button_states['cancel_button']:
+        if not get_button_state('cancel_button')['enabled']:
             logging.info("Cancel process aborted: Cancel button is not enabled.")
             return
 
@@ -186,37 +152,32 @@ class Callbacks:
             else:
                 logging.info("No active Wi-Fi connection to disconnect, or process was canceled before connection.")
 
-            # Update button states after cancel
-            self._set_button_states('default')
-
             self.app.builder.get_object('progress_bar')['value'] = 0
 
             logging.info("Process cancelled and UI reset. Ready for new operations.")
-            update_status(self.app, 'The process was cancelled by the user.', 'info')
+            update_status(self.app, 'Ready.', 'info')  # This will reset the button states
+
         except Exception as e:
             logging.error(f"Error during process cancellation: {str(e)}")
             update_status(self.app, f"Cancellation error: {str(e)}", 'error')
-        finally:
-            self.last_cancel_time = time.time()  # Update the last cancel time
 
     def process_finished(self):
         logging.info("Process finished")
         self.app.is_running = False
 
         # Re-enable UI elements after the process is finished
-        self._set_button_states('default')
         self.app.builder.get_object('progress_bar')['value'] = 0
 
         if self.app.quit_var.get():
             self.app.main_window.quit()
         else:
-            update_status(self.app, 'Ready.', 'info')
+            update_status(self.app, 'Ready.', 'info')  # This will reset the button states
 
         if self.app.import_oscar_var.get():
             self.import_cpap_data_with_oscar()
 
     def quit_application(self, event=None):
-        if not self.app.button_states['quit_button']:
+        if not get_button_state('quit_button')['enabled']:
             logging.info("Quit application aborted: Quit button is not enabled.")
             return
 
@@ -234,21 +195,21 @@ class Callbacks:
             logging.info("Application has been quit.")
 
     def open_oscar_download_page(self, event=None):
-        if not self.app.button_states['download_oscar_link']:
+        if not get_button_state('open_oscar')['enabled']:
             logging.warning("Open OSCAR download page aborted: Button is not enabled.")
             return
         logging.info("Opening OSCAR download page.")
         webbrowser.open("https://www.sleepfiles.com/OSCAR/")
 
     def open_folder_selector(self, event=None):
-        if not self.app.button_states['select_folder_button']:
+        if not get_button_state('select_folder_button')['enabled']:
             logging.warning("Open folder selector aborted: Button is not enabled.")
             return
 
         logging.info("Opening folder selector dialog.")
         try:
             # Update button states for running process
-            self._set_button_states('process_running')
+            set_process_button_states(self.app)
 
             select_folder_button = self.app.builder.get_object('select_folder_button')
             select_folder_button.state(['!pressed'])
@@ -267,14 +228,14 @@ class Callbacks:
                 self.folder_selector_dialog.close_dialog()
 
             # Update button states after folder selection
-            self._set_button_states('default')
+            update_status(self.app, 'Ready.', 'info')  # This will reset the button states
 
         except Exception as e:
             logging.error(f"Error during folder selector close: {str(e)}")
             update_status(self.app, f"Folder selector close error: {str(e)}", 'error')
 
     def import_cpap_data_with_oscar(self, event=None):
-        if not self.app.button_states['import_oscar_checkbox']:
+        if not get_button_state('import_oscar_checkbox')['enabled']:
             logging.warning("Import CPAP data with OSCAR aborted: Button is not enabled.")
             return
 
@@ -297,15 +258,15 @@ class Callbacks:
             update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
 
     def update_ui_checkboxes(self):
-            logging.info("Updating checkboxes based on OSCAR installation status.")
-            try:
-                oscar_installed = check_oscar_installed()
-                self.app.import_oscar_var.set(self.app.config_manager.get_setting('Settings', 'import_oscar') == 'True' and oscar_installed)
-                self.app.builder.get_object('import_oscar_checkbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
-                if oscar_installed:
-                    self.app.builder.get_object('download_oscar_link').pack_forget()
-                else:
-                    self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
-            except Exception as e:
-                logging.error(f"Error during checkbox update: {str(e)}")
-                update_status(self.app, f"Checkbox update error: {str(e)}", 'error')
+        logging.info("Updating checkboxes based on OSCAR installation status.")
+        try:
+            oscar_installed = check_oscar_installed()
+            self.app.import_oscar_var.set(self.app.config_manager.get_setting('Settings', 'import_oscar') == 'True' and oscar_installed)
+            self.app.builder.get_object('import_oscar_checkbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
+            if oscar_installed:
+                self.app.builder.get_object('download_oscar_link').pack_forget()
+            else:
+                self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
+        except Exception as e:
+            logging.error(f"Error during checkbox update: {str(e)}")
+            update_status(self.app, f"Checkbox update error: {str(e)}", 'error')

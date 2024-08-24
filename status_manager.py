@@ -1,5 +1,6 @@
 import logging
 import threading
+from utils import set_default_button_states, update_button_state
 
 status_lock = threading.Lock()  # Ensure thread-safe status updates
 
@@ -29,6 +30,12 @@ def update_status(app, message, message_type='info', target_app=None):
                 if not target.is_running:  # Ensure not overriding ongoing operations
                     logging.info("Setting status to 'Ready.' and ensuring no active timers.")
                     target.status_timer = None
+                    set_default_button_states(target)  # Reset button states to default when Ready
+
+                    # Explicitly ensure critical buttons are correctly set
+                    logging.info("Explicitly ensuring 'start_button' and 'quit_button' are enabled.")
+                    update_button_state(target, 'start_button', enabled=True, is_default=True)
+                    update_button_state(target, 'quit_button', enabled=True)
 
 def set_status_colour(app, message_type):
     if message_type == 'error':
@@ -63,3 +70,10 @@ def reset_status(app):
         if not app.is_running:
             app.builder.get_object('status_label')['text'] = 'Ready.'
             set_status_colour(app, 'info')
+            logging.info("Status is 'Ready.' Resetting button states to default.")
+            set_default_button_states(app)  # Reset button states to default when Ready
+
+            # Explicitly ensure critical buttons are correctly set
+            logging.info("Explicitly ensuring 'start_button' and 'quit_button' are enabled.")
+            update_button_state(app, 'start_button', enabled=True, is_default=True)
+            update_button_state(app, 'quit_button', enabled=True)

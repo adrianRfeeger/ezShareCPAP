@@ -9,7 +9,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access, resource_path
+from utils import ensure_and_check_disk_access, resource_path, set_default_button_states, set_process_button_states, get_button_state
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -38,17 +38,8 @@ class EzShareCPAPUI:
         self.builder.get_object('quit_checkbox').config(variable=self.quit_var)
         self.builder.get_object('import_oscar_checkbox').config(variable=self.import_oscar_var)
 
-        # Initialize button states
-        self.button_states = {
-            'start_button': True,
-            'cancel_button': False,  # Initially disabled
-            'quit_button': True,
-            'download_oscar_link': True,
-            'save_button': True,
-            'restore_defaults_button': True,
-            'select_folder_button': True,
-            'configure_wifi_button': True
-        }
+        # Initialize button states using the utils function
+        set_default_button_states(self)
 
         self.callbacks = Callbacks(self)
         self.ezshare_config = EzShareConfig(self)
@@ -63,41 +54,25 @@ class EzShareCPAPUI:
         self.builder.get_object('configure_wifi_button').config(command=lambda: self.handle_button_click('configure_wifi_button', self.ezshare_config.configure_ezshare))
 
         # Bind the label (not a button) with an event
-        self.builder.get_object('download_oscar_link').bind("<Button-1>", lambda event: self.handle_button_click('download_oscar_link', self.callbacks.open_oscar_download_page))
+        self.builder.get_object('download_oscar_link').bind("<Button-1>", self.callbacks.open_oscar_download_page)
 
         self.load_config()
-        self.callbacks.update_ui_checkboxes()  # Updated method call
+        self.callbacks.update_ui_checkboxes()
         ensure_and_check_disk_access(self.config_manager.get_setting('Settings', 'path'))
-        
+
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-        # Initialize button states after loading config
-        self.initialize_button_states()
-
     def handle_button_click(self, button_name, action):
-        if self.button_states.get(button_name, False):
+        if get_button_state(button_name)['enabled']:
             action()
         else:
             logging.info(f"Button '{button_name}' is disabled and was clicked.")
 
-    def update_button_state(self, button_name, state, is_default=False):
-        self.button_states[button_name] = state
-        button = self.builder.get_object(button_name)
-        button.config(state=tk.NORMAL if state else tk.DISABLED)
-        if is_default:
-            button.config(default=tk.ACTIVE)
-
     def enable_ui_elements(self):
-        for button in self.button_states:
-            self.update_button_state(button, True)
+        set_default_button_states(self)
 
     def disable_ui_elements(self):
-        for button in self.button_states:
-            self.update_button_state(button, False)
-
-    def initialize_button_states(self):
-        for button_name in self.button_states:
-            self.update_button_state(button_name, self.button_states[button_name])
+        set_process_button_states(self)
 
     def update_status(self, message, message_type='info'):
         logging.debug(f"Attempting to update status to '{message}' with type '{message_type}'")
@@ -127,7 +102,7 @@ class EzShareCPAPUI:
     def process_finished(self):
         logging.info("Process finished")
         self.is_running = False
-        self.enable_ui_elements()
+        set_default_button_states(self)
         self.builder.get_object('progress_bar')['value'] = 0
         if self.quit_var.get():
             self.main_window.quit()
