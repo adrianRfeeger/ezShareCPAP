@@ -1,6 +1,8 @@
+# wifi_utils.py
 import subprocess
 import logging
 import threading
+from status_manager import update_status
 
 logger = logging.getLogger(__name__)
 connection_lock = threading.Lock()
@@ -98,7 +100,64 @@ def disconnect_wifi(ssid, interface):
             logger.exception(f"Exception during Wi-Fi disconnection: {e}")
             return False
 
+def verify_wifi_connection(interface):
+    logger.debug(f"Verifying Wi-Fi connection on interface {interface} by pinging 192.168.4.1.")
+    try:
+        # Remove the interface specification from the ping command
+        ping_command = ["ping", "-c", "2", "192.168.4.1"]
+        result = subprocess.run(ping_command, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            logger.info(f"Ping successful on interface {interface}. Connection verified.")
+            return True
+        else:
+            logger.error(f"Ping failed: {result.stderr}")
+            return False
+    except Exception as e:
+        logger.exception(f"Exception during ping: {e}")
+        return False
+
+def connect_and_verify_wifi(ssid, psk):
+    """
+    Centralised function to connect to Wi-Fi, verify the connection, and handle errors.
+    
+    :param ssid: SSID of the Wi-Fi network.
+    :param psk: Pre-shared key for the Wi-Fi network.
+    :return: Interface name if connected and verified, None otherwise.
+    """
+    update_status(None, 'Connecting to Wi-Fi...', 'info')
+    interface = find_wifi_interface()
+    if not interface:
+        update_status(None, 'No Wi-Fi interface found. Cannot connect.', 'error')
+        return None
+
+    try:
+        connect_to_wifi(ssid, psk, interface)
+        update_status(None, f'Connected to {ssid}. Verifying connection...', 'info')
+
+        # Verify the connection using ping
+        if verify_wifi_connection(interface):
+            update_status(None, f'Wi-Fi connection to {ssid} verified successfully.', 'info')
+            return interface
+        else:
+            update_status(None, 'Wi-Fi connection verification failed.', 'error')
+            disconnect_wifi(ssid, interface)
+            return None
+    except RuntimeError as e:
+        update_status(None, f'Error connecting to {ssid}: {e}', 'error')
+        return None
+    except Exception as e:
+        logger.exception(f"Unexpected error during Wi-Fi connection: {e}")
+        update_status(None, f'Unexpected error: {e}', 'error')
+        return None
+
 def reset_wifi_configuration(interface):
+    """
+    Reset the Wi-Fi configuration by toggling the Wi-Fi off and on again.
+
+    :param interface: The interface used for the Wi-Fi connection.
+    :return: None
+    """
     with connection_lock:
         logger.debug(f"Resetting Wi-Fi configuration for interface {interface}.")
         if not interface:

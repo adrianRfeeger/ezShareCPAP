@@ -1,10 +1,11 @@
+# ezshare.py
 import pathlib
 import logging
 import requests
 import urllib
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi_utils import connect_to_wifi, disconnect_wifi
+from wifi_utils import connect_and_verify_wifi, disconnect_wifi
 from file_ops import recursive_traversal, list_dir
 
 class ezShare:
@@ -81,13 +82,10 @@ class ezShare:
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
-                self.interface_name = connect_to_wifi(self.ssid, self.psk)  # Capture the interface
-                logging.info(f"Interface Name Set: {self.interface_name}")  # Log the interface name
+                self.interface_name = connect_and_verify_wifi(self.ssid, self.psk)  # Use the new centralised function
                 if not self.interface_name or not self._is_running:
-                    raise RuntimeError("Failed to find a Wi-Fi interface for connection or process was canceled.")
+                    raise RuntimeError("Failed to verify Wi-Fi connection or process was canceled.")
                 self.update_status(f'Connected to {self.ssid}.')
-                if not self._is_running:
-                    raise RuntimeError("Operation cancelled by user.")
             except RuntimeError as e:
                 self.update_status(f'Failed to connect to {self.ssid} or process canceled.', 'error')
                 return
@@ -96,8 +94,7 @@ class ezShare:
 
         disconnect_wifi(self.ssid, self.interface_name)  # Disconnect from Wi-Fi after operation
         self.update_status('Disconnected from Wi-Fi.')
-        return self.interface_name  # Return the interface used for connection
-
+        return self.interface_name
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0

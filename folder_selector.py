@@ -1,8 +1,9 @@
+# folder_selector.py
 import tkinter as tk
 from tkinter import ttk, TclError
 import pygubu
 import threading
-from wifi_utils import connect_to_wifi, disconnect_wifi
+from wifi_utils import connect_and_verify_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
@@ -77,7 +78,7 @@ class FolderSelectorDialog:
 
         try:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
-            interface = connect_to_wifi(ssid, psk)
+            interface = connect_and_verify_wifi(ssid, psk)
             
             # Check if the process was canceled before proceeding
             if not interface or self.stop_thread or not self.main_window.is_running:

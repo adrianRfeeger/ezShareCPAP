@@ -1,3 +1,4 @@
+# main.py
 import pathlib
 import tkinter as tk
 import queue
@@ -10,6 +11,7 @@ from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
 from utils import ensure_and_check_disk_access, resource_path, initialize_button_states, set_default_button_states, set_process_button_states, get_button_state
+from worker import EzShareWorker
 
 class EzShareCPAPUI:
     def __init__(self, master=None):
@@ -111,6 +113,12 @@ class EzShareCPAPUI:
             self.update_status('Ready.', 'info')
         if self.import_oscar_var.get():
             self.callbacks.import_cpap_data_with_oscar()
+
+    def start_worker(self):
+        # Create and start the worker thread with the current app context
+        logging.info("Starting new worker thread.")
+        self.worker = EzShareWorker(self.ezshare, self.worker_queue, name="EzShareWorkerThread", app=self)  # Pass self as app
+        self.worker.start()
 
     def load_config(self):
         try:

@@ -1,18 +1,22 @@
+# status_manager.py
 import logging
 import threading
 from utils import set_default_button_states, update_button_state
 
-status_lock = threading.Lock()  # Ensure thread-safe status updates
+status_lock = threading.Lock()
 
 def update_status(app, message, message_type='info', target_app=None):
     target = target_app if target_app else app
+    if not target or not hasattr(target, 'builder'):
+        logging.error("Cannot update status: app or builder is None or improperly passed.")
+        return
+
     current_status = target.builder.get_object('status_label')['text']
     logging.info(f"Requested status update from '{current_status}' to '{message}' with type '{message_type}'")
-    
+
     with status_lock:
         if message != current_status:
             if hasattr(target, 'status_timer') and target.status_timer:
-                logging.info("Cancelling existing status timer before updating status.")
                 try:
                     get_window(target).after_cancel(target.status_timer)
                 except Exception as e:
@@ -24,16 +28,11 @@ def update_status(app, message, message_type='info', target_app=None):
             log_status(message, message_type)
 
             if message_type == 'info' and message != 'Ready.':
-                logging.info("Setting new status timer to reset status to 'Ready.'")
                 target.status_timer = get_window(target).after(5000, lambda: reset_status(target))
             elif message_type == 'info' and message == 'Ready.':
-                if not target.is_running:  # Ensure not overriding ongoing operations
-                    logging.info("Setting status to 'Ready.' and ensuring no active timers.")
+                if not target.is_running:
                     target.status_timer = None
-                    set_default_button_states(target)  # Reset button states to default when Ready
-
-                    # Explicitly ensure critical buttons are correctly set
-                    logging.info("Explicitly ensuring 'start_button' and 'quit_button' are enabled.")
+                    set_default_button_states(target)
                     update_button_state(target, 'start_button', enabled=True, is_default=True)
                     update_button_state(target, 'quit_button', enabled=True)
 
