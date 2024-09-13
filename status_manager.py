@@ -1,4 +1,3 @@
-# status_manager.py
 import logging
 import threading
 from utils import set_default_button_states, update_button_state
@@ -28,8 +27,10 @@ def update_status(app, message, message_type='info', target_app=None):
             log_status(message, message_type)
 
             if message_type == 'info' and message != 'Ready.':
+                # Set a delay to reset status to "Ready." only when no other operation is running
                 target.status_timer = get_window(target).after(5000, lambda: reset_status(target))
             elif message_type == 'info' and message == 'Ready.':
+                # Reset only if nothing is running
                 if not target.is_running:
                     target.status_timer = None
                     set_default_button_states(target)

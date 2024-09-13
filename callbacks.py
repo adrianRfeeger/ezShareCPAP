@@ -1,3 +1,4 @@
+# callbacks.py
 import pathlib
 import webbrowser
 import subprocess
@@ -7,7 +8,7 @@ import queue
 import time
 import sys
 from worker import EzShareWorker
-from utils import ensure_and_check_disk_access, get_button_state, set_process_button_states, set_default_button_states, check_oscar_installed
+from utils import ensure_and_check_disk_access, get_button_state, set_process_button_states, set_default_button_states, check_oscar_installed, update_button_state
 from status_manager import update_status
 from wifi_utils import disconnect_wifi, reset_wifi_configuration
 from folder_selector import FolderSelectorDialog
@@ -113,7 +114,12 @@ class Callbacks:
 
             # Create and start the worker thread
             logging.info("Starting new worker thread.")
-            self.app.worker = EzShareWorker(self.app.ezshare, self.app.worker_queue, name="EzShareWorkerThread")
+            self.app.worker = EzShareWorker(
+                self.app.ezshare,
+                self.app.worker_queue,
+                name="EzShareWorkerThread",
+                app=self.app  # Pass the app instance here
+            )
             self.app.worker.start()
 
             # Only set is_running to True after the worker starts
@@ -163,6 +169,7 @@ class Callbacks:
 
             # Reset button states to default after cancellation
             set_default_button_states(self.app)
+            self.last_cancel_time = time.time()  # Update the last cancel time
 
         except Exception as e:
             logging.error(f"Error during process cancellation: {str(e)}")
