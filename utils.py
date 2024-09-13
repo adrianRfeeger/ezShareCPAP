@@ -1,3 +1,4 @@
+# utils.py
 import os
 import subprocess
 import sys
@@ -6,12 +7,10 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-import tkinter as tk
-import logging
-
 def initialize_button_states(app):
     """
-    Initialize the button states with default values in the application.
+    Initialize the button states with default values in the application,
+    including text fields in the main window.
     """
     app.button_states = {
         'start_button': {'enabled': True, 'default': True, 'visible': True},
@@ -23,62 +22,65 @@ def initialize_button_states(app):
         'quit_checkbox': {'enabled': True, 'default': True, 'visible': True},
         'select_folder_button': {'enabled': True, 'default': True, 'visible': True},
         'configure_wifi_button': {'enabled': True, 'default': True, 'visible': True},
-        'local_directory_path': {'enabled': True, 'default': True, 'visible': True}
+        'local_directory_path': {'enabled': True, 'default': True, 'visible': True},
+        'url_entry': {'enabled': True, 'default': True, 'visible': True},
+        'ssid_entry': {'enabled': True, 'default': True, 'visible': True},
+        'psk_entry': {'enabled': True, 'default': True, 'visible': True},
     }
 
 def update_button_state(app, button_name, enabled=None, is_default=None, visible=None):
     """
-    Update the state, visibility, and default status of a button in the UI and its state in the global dictionary.
+    Update the state, visibility, and default status of a button or text field in the UI and its state in the global dictionary.
     """
-    button = app.builder.get_object(button_name)
+    widget = app.builder.get_object(button_name)
     state_info = app.button_states[button_name]
 
     if enabled is not None:
         state_info['enabled'] = enabled
-        button.config(state=tk.NORMAL if enabled else tk.DISABLED)
+        widget.config(state=tk.NORMAL if enabled else tk.DISABLED)
 
     # Apply the default option only if the widget is a tk.Button
-    if isinstance(button, tk.Button) and is_default is not None:
+    if isinstance(widget, tk.Button) and is_default is not None:
         state_info['default'] = is_default
-        button.config(default=tk.ACTIVE if is_default else tk.NORMAL)
+        widget.config(default=tk.ACTIVE if is_default else tk.NORMAL)
 
     if visible is not None:
         state_info['visible'] = visible
         if visible:
-            button.pack()  # Show the button using pack()
+            widget.pack()  # Show the widget using pack()
         else:
-            button.pack_forget()  # Hide the button using pack_forget()
+            widget.pack_forget()  # Hide the widget using pack_forget()
 
-    logging.info(f"Updated button '{button_name}' - Enabled: {state_info['enabled']}, Default: {state_info.get('default')}, Visible: {state_info['visible']}")
+    logging.info(f"Updated widget '{button_name}' - Enabled: {state_info['enabled']}, Default: {state_info.get('default')}, Visible: {state_info['visible']}")
 
 def set_default_button_states(app):
     """
-    Reset all buttons to their default states as defined in the global dictionary.
+    Reset all buttons and text fields to their default states as defined in the global dictionary.
     """
-    logging.info("Setting all button states to their default values.")
-    for button_name, state_info in app.button_states.items():
-        update_button_state(app, button_name, enabled=state_info['default'], is_default=state_info['default'])
+    logging.info("Setting all widget states to their default values.")
+    for widget_name, state_info in app.button_states.items():
+        update_button_state(app, widget_name, enabled=state_info['default'], is_default=state_info['default'])
 
 def set_process_button_states(app):
     """
-    Set all buttons to their states during a major process, disabling all but the cancel button.
+    Set all buttons and text fields to their states during a major process, disabling all but the cancel button.
     """
-    logging.info("Setting all button states for a process (disabling most except the cancel button).")
-    for button_name in app.button_states:
-        if button_name == 'cancel_button':
-            update_button_state(app, button_name, enabled=True, is_default=True)
+    logging.info("Setting all widget states for a process (disabling most except the cancel button).")
+    for widget_name in app.button_states:
+        if widget_name == 'cancel_button':
+            update_button_state(app, widget_name, enabled=True, is_default=True)
         else:
-            update_button_state(app, button_name, enabled=False, is_default=False)
+            update_button_state(app, widget_name, enabled=False, is_default=False)
 
 def get_button_state(app, button_name):
     """
-    Retrieve the current state of a button from the global dictionary.
+    Retrieve the current state of a button or text field from the global dictionary.
 
     Parameters:
-    button_name (str): The name of the button.
+    button_name (str): The name of the button or text field.
 
     Returns:
-    dict: The current state of the button.
+    dict: The current state of the button or text field.
     """
     return app.button_states.get(button_name, {'enabled': False, 'default': False, 'visible': True})
 
