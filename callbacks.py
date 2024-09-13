@@ -10,7 +10,6 @@ import sys
 from worker import EzShareWorker
 from utils import ensure_and_check_disk_access, get_button_state, set_process_button_states, set_default_button_states, check_oscar_installed, update_button_state
 from status_manager import update_status
-from wifi_utils import disconnect_wifi, reset_wifi_configuration
 from folder_selector import FolderSelectorDialog
 
 class Callbacks:
