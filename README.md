@@ -240,21 +240,6 @@ The GUI provides an intuitive way to configure and run the file synchronization 
     5. If ezShareCPAP is already listed and enabled, try removing it and re-adding it.
 ![image](https://github.com/user-attachments/assets/046be7ac-c767-4325-8c6c-f3b30778b2d0)
 
-### Application Crashes or Unresponsiveness
-
-- **Check Log Files:**
-  - Review the `application.log` file in the application's directory for error messages.
-
-- **Update the Application:**
-  - Ensure you're using the latest version of ezShareCPAP from the [GitHub repository](https://github.com/adrianrfeeger/ezShareCPAP).
-
-- **Reinstall Dependencies:**
-  - If running from source, reinstall the required Python packages:
-
-    ```bash
-    pip install --force-reinstall -r requirements.txt
-    ```
-
 ### Permissions Issues
 
 - **Full Disk Access:**
@@ -269,7 +254,7 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 
 ## Support
 
-If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianrfeeger/ezShareCPAP/issues) with details of the problem.
+If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/issues) with details of the problem.
 
 ## License
 
