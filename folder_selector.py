@@ -7,8 +7,9 @@ from wifi_utils import connect_and_verify_wifi, disconnect_wifi
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
-from utils import resource_path, update_button_state  # Import the utility function
+from utils import resource_path, update_button_state
 import logging
+import urllib.parse
 
 class FolderSelectorDialog:
     def __init__(self, master, main_window):
@@ -49,6 +50,9 @@ class FolderSelectorDialog:
         # Bind the selection event to control selection
         self.treeview.bind('<<TreeviewSelect>>', self.on_treeview_select)
 
+        # Initialize the structure to store the full directory and file contents
+        self.directory_structure = {}  # This will store the full directory structure
+
     def populate_treeview_with_http(self):
         # Hide the dialog before populating the Treeview
         self.dialog.withdraw()
@@ -86,19 +90,15 @@ class FolderSelectorDialog:
 
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
-            # Clear the treeview only if it exists
-            if self.treeview.winfo_exists() and not self.stop_thread:
-                self.main_window.main_window.after(0, lambda: self.clear_treeview())
+            # Fetch the complete directory structure
+            self.directory_structure = self._fetch_directory_contents(base_url)
 
-            # Populate treeview with HTTP server contents
+            # Populate the treeview using the fetched directory structure
             if self.treeview.winfo_exists() and not self.stop_thread:
-                self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Retrieving ez Share SD card directory information...'))
                 root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
-                self.main_window.main_window.after(0, lambda: self._populate_treeview_node(root_node, base_url))
-                self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'ez Share SD card directory information retrieved.'))
+                self._populate_treeview_node(root_node, self.directory_structure)
 
         except RuntimeError as e:
-            # Capture 'e' inside the lambda to ensure it is accessible within the lambda's scope
             error_message = f'Failed to connect to Wi-Fi or process canceled: {e}'
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, error_message, 'error'))
         finally:
@@ -110,33 +110,44 @@ class FolderSelectorDialog:
             self.main_window.is_running = False
             self.main_window.main_window.after(0, self.set_status_ready_with_timer)
 
-    def clear_treeview(self):
-        for item in self.treeview.get_children():
-            self.treeview.delete(item)
+    def _fetch_directory_contents(self, url):
+        """
+        Recursively fetch all files and directories from the server and store them in a nested dictionary.
+        
+        :param url: The URL of the directory to start fetching from.
+        :return: A nested dictionary with directories and their contents.
+        """
+        contents = {"files": [], "dirs": {}}  # Initialize a structure to hold files and subdirectories
 
-    def _populate_treeview_node(self, parent, url):
-        try:
-            # Ensure the Treeview widget still exists before performing operations on it
-            if not self.treeview.winfo_exists() or self.stop_thread:
-                logging.warning("Treeview no longer exists or thread stopped, aborting population.")
-                return
+        # Fetch the current directory contents
+        files, dirs = list_dir(self.ezshare, url)
 
-            # Fetch files and directories using list_dir
-            files, dirs = list_dir(self.ezshare, url)
+        # Store files
+        for filename, file_url, _ in files:
+            contents["files"].append((filename, file_url))
 
-            # Populate directories first
-            for dirname, dir_url in dirs:
-                full_dir_url = url + '/' + dirname
-                node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=('folder', full_dir_url))
-                self._populate_treeview_node(node_id, full_dir_url)
+        # Recursively fetch and store directories
+        for dirname, dir_url in dirs:
+            absolute_dir_url = urllib.parse.urljoin(url, dir_url)
+            contents["dirs"][dirname] = self._fetch_directory_contents(absolute_dir_url)
 
-            # Then populate files
-            for filename, file_url, _ in files:
-                full_file_url = url + '/' + filename
-                self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=('file', full_file_url))
+        return contents
 
-        except TclError as e:
-            logging.error(f"Error during Treeview population: {e}")
+    def _populate_treeview_node(self, parent, directory_structure):
+        """
+        Populate the treeview node using the fetched directory structure.
+
+        :param parent: The parent node in the treeview.
+        :param directory_structure: The nested dictionary containing directory contents.
+        """
+        # Populate directories first
+        for dirname, subdir_structure in directory_structure["dirs"].items():
+            node_id = self.treeview.insert(parent, 'end', text=' ' + dirname, open=False, image=self.folder_icon, tags=('folder', dirname))
+            self._populate_treeview_node(node_id, subdir_structure)
+
+        # Then populate files
+        for filename, file_url in directory_structure["files"]:
+            self.treeview.insert(parent, 'end', text=' ' + filename, image=self.file_icon, tags=('file', file_url))
 
     def ensure_treeview_populated(self):
         if not self.treeview.winfo_exists():
