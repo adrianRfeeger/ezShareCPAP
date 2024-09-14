@@ -225,6 +225,9 @@ class Callbacks:
             self.app.config_manager.set_setting('WiFi', 'ssid', ssid)
             self.app.config_manager.set_setting('WiFi', 'psk', psk)
             self.app.config_manager.save_config()
+            # Checkboxes should be saved here
+            self.app.config_manager.set_setting('Settings', 'quit_after_completion', str(self.app.quit_var.get()))
+            self.app.config_manager.set_setting('Settings', 'import_oscar', str(self.app.import_oscar_var.get()))
 
             update_status(self.app, 'Configuration saved successfully.', 'info')
         except Exception as e:
