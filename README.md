@@ -12,8 +12,8 @@ ezShareCPAP is a macOS application designed to download files from an [ez Share 
 - **User Interface:** Provides a graphical user interface (GUI) for ease of use.
 - **Configuration:** Handles configuration settings directly through the GUI.
 - **Real-time Updates:** Displays status updates during the file synchronization process.
-- **Import with OSCAR:** Option to automatically import data with OSCAR after completion.
-- **Quit After Completion:** Option to automatically quit the application after completion.
+- **Open OSCAR:** Option to automatically import data with OSCAR after completion.
+- **Quit:** Option to automatically quit the application after completion.
 - **ez Share Configuration:** Allows configuring the ez Share SD card settings via the application.
 - **Folder Selection:** Browse and select folders on the ez Share SD card to specify which files to sync.
 
