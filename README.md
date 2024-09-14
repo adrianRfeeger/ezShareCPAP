@@ -50,7 +50,7 @@ ezShareCPAP is a macOS application designed to download files from an [ez Share 
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/adrianrfeeger/ezShareCPAP.git
+   git clone https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version.git
    cd ezShareCPAP
    ```
 
