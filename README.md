@@ -1,8 +1,9 @@
 # ezShareCPAP
+<img width="532" alt="image" src="https://github.com/user-attachments/assets/6ed446ef-5753-4165-b092-e6e2f059e696">
 
 ## Overview
 
-ezShareCPAP is a macOS application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) and [SleepHQ](https://home.sleephq.com/) for data analysis and visualization.
+ezShareCPAP is a macOS application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualization.
 
 ## Features
 
@@ -28,7 +29,7 @@ ezShareCPAP is a macOS application designed to download files from an [ez Share 
 
 1. **Download the Release Version:**
 
-   - Download the latest release compiled with PyInstaller from the https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/releases.
+   - Download the latest release compiled with PyInstaller from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/releases).
 2. **Extract the ZIP File:**
 
    - Unzip the downloaded file.
@@ -237,8 +238,7 @@ The GUI provides an intuitive way to configure and run the file synchronization 
     3. Click the lock icon to make changes and enter your password.
     4. Ensure **ezShareCPAP** is listed and checked. If not, click the **'+'** button and add the ezShareCPAP application.
     5. If ezShareCPAP is already listed and enabled, try removing it and re-adding it.
-
-    ![Accessibility Settings](path/to/your/image.png)
+![image](https://github.com/user-attachments/assets/046be7ac-c767-4325-8c6c-f3b30778b2d0)
 
 ### Application Crashes or Unresponsiveness
 
