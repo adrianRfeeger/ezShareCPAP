@@ -84,25 +84,39 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Entry" id="url_entry" named="True">
+              <object class="ttk.Frame" id="frame4">
+                <property name="height">200</property>
+                <property name="width">200</property>
                 <layout manager="pack">
-                  <property name="anchor">nw</property>
                   <property name="expand">true</property>
                   <property name="fill">both</property>
-                  <property name="padx">10</property>
-                  <property name="pady">5</property>
-                  <property name="side">left</property>
+                  <property name="padx">5</property>
+                  <property name="side">top</property>
                 </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Button" id="select_folder_button" named="True">
-                <property name="text" translatable="yes">Select Folder</property>
-                <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
-                <layout manager="pack">
-                  <property name="expand">true</property>
-                  <property name="side">left</property>
-                </layout>
+                <child>
+                  <object class="ttk.Entry" id="url_entry" named="True">
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="select_folder_button" named="True">
+                    <property name="text" translatable="yes">Select Folder</property>
+                    <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
