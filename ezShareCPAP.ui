@@ -97,10 +97,10 @@
             </child>
             <child>
               <object class="ttk.Button" id="select_folder_button" named="True">
-                <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Select Folder</property>
                 <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
                 <layout manager="pack">
+                  <property name="expand">true</property>
                   <property name="side">left</property>
                 </layout>
               </object>
