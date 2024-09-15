@@ -110,8 +110,7 @@
                     <property name="text" translatable="yes">Select Folder</property>
                     <bind sequence="&lt;ButtonRelease&gt;" handler="open_folder_selector" add="" />
                     <layout manager="pack">
-                      <property name="expand">true</property>
-                      <property name="fill">both</property>
+                      <property name="expand">false</property>
                       <property name="padx">5</property>
                       <property name="side">left</property>
                     </layout>
