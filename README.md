@@ -210,9 +210,6 @@ The GUI provides an intuitive way to configure and run the file synchronization 
   - Ensure the ez Share SD card is inserted into a powered-on device (e.g., CPAP machine).
   - The device should be within close range (5-10 meters) of your computer.
 
-- **Interference:**
-  - Minimize interference by turning off other Wi-Fi devices during the connection process.
-
 ### File Download Issues
 
 - **Check the URL:**
