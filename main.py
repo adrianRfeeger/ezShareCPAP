@@ -4,7 +4,7 @@ import tkinter as tk
 import queue
 import logging
 import pygubu
-from tkinter import BooleanVar
+from tkinter import BooleanVar, messagebox
 from ezshare import ezShare
 from config_manager import ConfigManager
 from callbacks import Callbacks
@@ -65,6 +65,21 @@ class EzShareCPAPUI:
 
         logging.basicConfig(filename='application.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+        # Add Help menu
+        menubar = tk.Menu(self.main_window)
+        helpmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="About", command=self.show_about_dialog)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+        self.main_window.config(menu=menubar)
+
+    def show_about_dialog(self):
+        about_message = (
+            "ezShareCPAP\n"
+            "Version 1.0\n"
+            "This application downloads CPAP data from an ez Share Wi-Fi SD card and imports it into OSCAR."
+        )
+        messagebox.showinfo("About ezShareCPAP", about_message)
+
     def handle_button_click(self, button_name, action):
         if get_button_state(self, button_name)['enabled']:
             action()
@@ -95,7 +110,11 @@ class EzShareCPAPUI:
             elif msg[0] == 'status':
                 self.update_status(msg[1], msg[2])
             elif msg[0] == 'finished':
-                self.process_finished()
+                success = msg[1]
+                if success:
+                    self.process_finished()
+                else:
+                    self.process_failed()
         except queue.Empty:
             pass  # No message to process, continue normally
 
@@ -103,16 +122,23 @@ class EzShareCPAPUI:
             self.main_window.after(100, self.process_worker_queue)
 
     def process_finished(self):
-        logging.info("Process finished")
+        logging.info("Process finished successfully.")
         self.is_running = False
         set_default_button_states(self)
         self.builder.get_object('progress_bar')['value'] = 0
         if self.quit_var.get():
             self.main_window.quit()
         else:
-            self.update_status('Ready.', 'info')
+            self.update_status('Process completed successfully.', 'info')
         if self.import_oscar_var.get():
             self.callbacks.import_cpap_data_with_oscar()
+
+    def process_failed(self):
+        logging.info("Process failed or was canceled.")
+        self.is_running = False
+        set_default_button_states(self)
+        self.builder.get_object('progress_bar')['value'] = 0
+        self.update_status('Process failed or was canceled.', 'error')
 
     def start_worker(self):
         # Create and start the worker thread with the current app context

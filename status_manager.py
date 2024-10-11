@@ -1,3 +1,4 @@
+# status_manager.py
 import logging
 import threading
 from utils import set_default_button_states, update_button_state

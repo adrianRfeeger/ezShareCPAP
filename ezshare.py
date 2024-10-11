@@ -2,11 +2,11 @@
 import pathlib
 import logging
 import requests
-import urllib
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi_utils import connect_and_verify_wifi, disconnect_wifi
+from wifi_utils import ConnectionManager
 from file_ops import recursive_traversal, list_dir
+import urllib.parse
 
 class ezShare:
     def __init__(self):
@@ -21,10 +21,8 @@ class ezShare:
         self.keep_old = None
         self.ssid = None
         self.psk = None
-        self.connection_id = None
-        self.interface_name = None
         self.connected = False
-        self.session = requests.Session()
+        self.session = None
         self.ignore = ['.', '..', 'back to photo']
         self.retries = None
         self.connection_delay = None
@@ -36,7 +34,7 @@ class ezShare:
         self._is_running = True
         self._configure_logging()
         self.retry_policy = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
+        self.connection_manager = ConnectionManager()
 
     def _configure_logging(self):
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -67,6 +65,7 @@ class ezShare:
     def update_progress(self, value):
         if self.progress_callback:
             self.progress_callback(min(max(0, value), 100))
+            self.update_status(f'Progress: {value:.2f}%')
 
     def update_status(self, message, message_type='info'):
         if self.status_callback:
@@ -82,19 +81,31 @@ class ezShare:
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
             try:
-                self.interface_name = connect_and_verify_wifi(self.ssid, self.psk)  # Use the new centralised function
-                if not self.interface_name or not self._is_running:
-                    raise RuntimeError("Failed to verify Wi-Fi connection or process was canceled.")
+                self.connection_manager.connect(self.ssid, self.psk)
+                if not self.connection_manager.connected or not self._is_running:
+                    raise RuntimeError("Failed to connect to Wi-Fi or process was canceled.")
+
+                if not self.connection_manager.verify_connection():
+                    raise RuntimeError("Failed to verify Wi-Fi connection.")
+
                 self.update_status(f'Connected to {self.ssid}.')
+                self.connected = True
+                self.session = requests.Session()
+                self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
             except RuntimeError as e:
                 self.update_status(f'Failed to connect to {self.ssid} or process canceled.', 'error')
                 return
 
             self.run_after_connection_delay()
 
-        disconnect_wifi(self.ssid, self.interface_name)  # Disconnect from Wi-Fi after operation
-        self.update_status('Disconnected from Wi-Fi.')
-        return self.interface_name
+            if self.connected:
+                self.connection_manager.disconnect(self.ssid)
+                self.update_status('Disconnected from Wi-Fi.')
+                self.connected = False
+
+        else:
+            self.update_status('No SSID provided, cannot connect to Wi-Fi.', 'error')
+            return
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
@@ -115,17 +126,24 @@ class ezShare:
             return
 
         self.path.mkdir(parents=True, exist_ok=True)
-        self.update_status(f'Path {self.path} created.')
-        self.update_status('Establishing files for download...')
+        self.update_status(f'Using path: {self.path}')
+        self.update_status('Scanning for files to download...')
         self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
         self.update_status(f'Total files to sync: {self.total_files}')
         if self.total_files == 0:
-            self.update_status('No files to sync. Process completed.')
+            self.update_status('All files are up to date. No files to sync. Process completed.')
             return
 
-        self.processed_files = recursive_traversal(self, self.url, self.path, self.total_files, self.processed_files, lambda: self._is_running)
-        self.update_status('File transfer completed.')
+        self.processed_files = recursive_traversal(
+            self, self.url, self.path, self.total_files, self.processed_files, lambda: self._is_running)
+        if self.processed_files == self.total_files:
+            self.update_status('File transfer completed successfully.')
+        else:
+            self.update_status('File transfer incomplete.', 'error')
 
     def stop(self):
         self._is_running = False
         self.update_status('Process stopped by user.', 'info')
+        if self.connected:
+            self.connection_manager.disconnect(self.ssid)
+            self.connected = False

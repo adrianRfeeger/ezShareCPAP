@@ -8,7 +8,14 @@ import queue
 import time
 import sys
 from worker import EzShareWorker
-from utils import ensure_and_check_disk_access, get_button_state, set_process_button_states, set_default_button_states, check_oscar_installed, update_button_state
+from utils import (
+    ensure_and_check_disk_access,
+    get_button_state,
+    set_process_button_states,
+    set_default_button_states,
+    check_oscar_installed,
+    update_button_state,
+)
 from status_manager import update_status
 from folder_selector import FolderSelectorDialog
 
@@ -33,7 +40,11 @@ class Callbacks:
             return False
         expanded_path = pathlib.Path(path).expanduser()
         if not ensure_and_check_disk_access(expanded_path, self.app):
-            update_status(self.app, 'Invalid Path: The specified path does not exist or is not writable.', 'error')
+            update_status(
+                self.app,
+                'Invalid Path: The specified path does not exist or is not writable.',
+                'error',
+            )
             return False
         return True
 
@@ -55,7 +66,9 @@ class Callbacks:
 
             # Check if the worker is already running and clean up if needed
             if self.app.worker and self.app.worker.is_alive():
-                logging.warning("Previous worker thread is still running. Stopping it before starting a new process.")
+                logging.warning(
+                    "Previous worker thread is still running. Stopping it before starting a new process."
+                )
                 self.app.worker.stop()
                 self.app.worker.join()
                 logging.info("Previous worker thread stopped successfully.")
@@ -79,8 +92,12 @@ class Callbacks:
 
             expanded_path = pathlib.Path(path).expanduser()
             settings = {
-                'Settings': {'path': str(expanded_path), 'url': url, 'quit_after_completion': str(self.app.quit_var.get())},
-                'WiFi': {'ssid': ssid, 'psk': psk}
+                'Settings': {
+                    'path': str(expanded_path),
+                    'url': url,
+                    'quit_after_completion': str(self.app.quit_var.get()),
+                },
+                'WiFi': {'ssid': ssid, 'psk': psk},
             }
             self.app.config_manager.set_setting('Settings', 'path', str(expanded_path))
             self.app.config_manager.set_setting('Settings', 'url', url)
@@ -101,7 +118,7 @@ class Callbacks:
                 ignore=[],
                 retries=3,
                 connection_delay=5,
-                debug=True
+                debug=True,
             )
 
             # Clear any remaining items in the worker queue
@@ -117,7 +134,7 @@ class Callbacks:
                 self.app.ezshare,
                 self.app.worker_queue,
                 name="EzShareWorkerThread",
-                app=self.app  # Pass the app instance here
+                app=self.app,  # Pass the app instance here
             )
             self.app.worker.start()
 
@@ -147,7 +164,10 @@ class Callbacks:
                 self.app.worker = None
 
             # Handle cancellation of the folder selector dialog
-            if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
+            if (
+                self.folder_selector_dialog
+                and self.folder_selector_dialog.dialog.winfo_exists()
+            ):
                 logging.info("Closing folder selector dialog.")
                 self.folder_selector_dialog.close_dialog()
 
@@ -156,7 +176,9 @@ class Callbacks:
                 logging.info("Cancelling ez Share configuration.")
                 self.app.ezshare_config.cancel_ezshare_config()
             else:
-                logging.info("No active ez Share configuration to cancel, or process was canceled before connection.")
+                logging.info(
+                    "No active ez Share configuration to cancel, or process was canceled before connection."
+                )
 
             logging.info("Resetting state after cancellation.")
             self.app.is_running = False
@@ -184,7 +206,9 @@ class Callbacks:
         if self.app.quit_var.get():
             self.app.main_window.quit()
         else:
-            update_status(self.app, 'Ready.', 'info')  # This will reset the button states
+            update_status(
+                self.app, 'Process completed successfully.', 'info'
+            )  # This will reset the button states
 
         if self.app.import_oscar_var.get():
             self.import_cpap_data_with_oscar()
@@ -224,10 +248,14 @@ class Callbacks:
             self.app.config_manager.set_setting('Settings', 'url', url)
             self.app.config_manager.set_setting('WiFi', 'ssid', ssid)
             self.app.config_manager.set_setting('WiFi', 'psk', psk)
-            self.app.config_manager.save_config()
             # Checkboxes should be saved here
-            self.app.config_manager.set_setting('Settings', 'quit_after_completion', str(self.app.quit_var.get()))
-            self.app.config_manager.set_setting('Settings', 'import_oscar', str(self.app.import_oscar_var.get()))
+            self.app.config_manager.set_setting(
+                'Settings', 'quit_after_completion', str(self.app.quit_var.get())
+            )
+            self.app.config_manager.set_setting(
+                'Settings', 'import_oscar', str(self.app.import_oscar_var.get())
+            )
+            self.app.config_manager.save_config()
 
             update_status(self.app, 'Configuration saved successfully.', 'info')
         except Exception as e:
@@ -277,7 +305,10 @@ class Callbacks:
     def close_folder_selector(self):
         logging.info("Closing folder selector dialog.")
         try:
-            if self.folder_selector_dialog and self.folder_selector_dialog.dialog.winfo_exists():
+            if (
+                self.folder_selector_dialog
+                and self.folder_selector_dialog.dialog.winfo_exists()
+            ):
                 self.folder_selector_dialog.close_dialog()
 
             # Update button states after folder selection
@@ -314,12 +345,19 @@ class Callbacks:
         logging.info("Updating checkboxes based on OSCAR installation status.")
         try:
             oscar_installed = check_oscar_installed()
-            self.app.import_oscar_var.set(self.app.config_manager.get_setting('Settings', 'import_oscar') == 'True' and oscar_installed)
-            self.app.builder.get_object('import_oscar_checkbox').config(state=tk.NORMAL if oscar_installed else tk.DISABLED)
+            self.app.import_oscar_var.set(
+                self.app.config_manager.get_setting('Settings', 'import_oscar') == 'True'
+                and oscar_installed
+            )
+            self.app.builder.get_object('import_oscar_checkbox').config(
+                state=tk.NORMAL if oscar_installed else tk.DISABLED
+            )
             if oscar_installed:
                 self.app.builder.get_object('download_oscar_link').pack_forget()
             else:
-                self.app.builder.get_object('download_oscar_link').pack(fill='both', expand=True, padx=10, pady=5, side='top')
+                self.app.builder.get_object('download_oscar_link').pack(
+                    fill='both', expand=True, padx=10, pady=5, side='top'
+                )
         except Exception as e:
             logging.error(f"Error during checkbox update: {str(e)}")
             update_status(self.app, f"Checkbox update error: {str(e)}", 'error')

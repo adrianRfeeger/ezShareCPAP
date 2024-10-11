@@ -1,15 +1,16 @@
 # folder_selector.py
 import tkinter as tk
-from tkinter import ttk, TclError
+from tkinter import ttk
 import pygubu
 import threading
-from wifi_utils import connect_and_verify_wifi, disconnect_wifi
+from wifi_utils import ConnectionManager
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
 from utils import resource_path, update_button_state
 import logging
 import urllib.parse
+import requests
 
 class FolderSelectorDialog:
     def __init__(self, master, main_window):
@@ -47,6 +48,9 @@ class FolderSelectorDialog:
         # Initialize ezShare instance
         self.ezshare = ezShare()
 
+        # Initialize ConnectionManager
+        self.connection_manager = ConnectionManager()
+
         # Bind the selection event to control selection
         self.treeview.bind('<<TreeviewSelect>>', self.on_treeview_select)
 
@@ -78,17 +82,24 @@ class FolderSelectorDialog:
         ssid = self.main_window.builder.get_object('ssid_entry').get()
         psk = self.main_window.builder.get_object('psk_entry').get()
         base_url = 'http://192.168.4.1/dir?dir=A:'
-        interface = None
 
         try:
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
-            interface = connect_and_verify_wifi(ssid, psk)
-            
-            # Check if the process was canceled before proceeding
-            if not interface or self.stop_thread or not self.main_window.is_running:
+
+            self.connection_manager.connect(ssid, psk)
+
+            if not self.connection_manager.connected or self.stop_thread or not self.main_window.is_running:
                 raise RuntimeError("Failed to connect or process was canceled.")
 
+            # Verify the connection
+            if not self.connection_manager.verify_connection():
+                raise RuntimeError("Failed to verify Wi-Fi connection.")
+
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
+
+            # Set up the session with retries
+            self.ezshare.session = requests.Session()
+            self.ezshare.session.mount('http://', requests.adapters.HTTPAdapter(max_retries=self.ezshare.retry_policy))
 
             # Fetch the complete directory structure
             self.directory_structure = self._fetch_directory_contents(base_url)
@@ -102,8 +113,8 @@ class FolderSelectorDialog:
             error_message = f'Failed to connect to Wi-Fi or process canceled: {e}'
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, error_message, 'error'))
         finally:
-            if interface:
-                self.main_window.main_window.after(0, lambda: disconnect_wifi(ssid, interface))
+            if self.connection_manager.connected:
+                self.connection_manager.disconnect(ssid)
             self.main_window.main_window.after(0, self.ensure_treeview_populated)
 
             # Set the `is_running` flag to False, allowing the "Ready" status to be set
