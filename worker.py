@@ -23,8 +23,11 @@ class EzShareWorker(threading.Thread):
             self._cleanup()
 
     def update_progress(self, value):
-        logging.debug(f"{self.name} updating progress: {value}%")
-        self.queue.put(('progress', min(max(0, value), 100)))
+        logging.debug(f"{self.name} updating progress: {value}")
+        if value == 'no_files':
+            self.queue.put(('no_files',))
+        else:
+            self.queue.put(('progress', min(max(0, value), 100)))
 
     def update_status(self, message, message_type='info'):
         logging.debug(f"{self.name} updating status: {message} (type: {message_type})")
@@ -44,7 +47,6 @@ class EzShareWorker(threading.Thread):
         if self.ezshare.connected:
             self.ezshare.connection_manager.disconnect(self.ezshare.ssid)
             self.ezshare.connected = False
-        # Adjusted success criteria
         success = (self.ezshare.processed_files == self.ezshare.total_files)
         self.queue.put(('finished', success))
         logging.info(f"{self.name} cleanup completed.")

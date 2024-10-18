@@ -109,29 +109,30 @@ class EzShareCPAPUI:
                 self.builder.get_object('progress_bar')['value'] = msg[1]
             elif msg[0] == 'status':
                 self.update_status(msg[1], msg[2])
+            elif msg[0] == 'no_files':
+                self.handle_no_files()
             elif msg[0] == 'finished':
                 success = msg[1]
-                if success:
-                    self.process_finished()
-                else:
-                    self.process_failed()
+                self.process_finished(success)
         except queue.Empty:
             pass  # No message to process, continue normally
 
         if self.is_running:
             self.main_window.after(100, self.process_worker_queue)
 
-    def process_finished(self):
-        logging.info("Process finished successfully.")
+    def process_finished(self, success=True):
+        logging.info("Process finished")
         self.is_running = False
         set_default_button_states(self)
         self.builder.get_object('progress_bar')['value'] = 0
-        if self.quit_var.get():
-            self.main_window.quit()
-        else:
+
+        if success:
             self.update_status('Process completed successfully.', 'info')
-        if self.import_oscar_var.get():
-            self.callbacks.import_cpap_data_with_oscar()
+            # Trigger completion tasks based on user preferences
+            if self.quit_var.get() or self.import_oscar_var.get():
+                self.prompt_completion_tasks()
+        else:
+            self.update_status('Process failed or was canceled.', 'error')
 
     def process_failed(self):
         logging.info("Process failed or was canceled.")
@@ -139,6 +140,47 @@ class EzShareCPAPUI:
         set_default_button_states(self)
         self.builder.get_object('progress_bar')['value'] = 0
         self.update_status('Process failed or was canceled.', 'error')
+
+    def prompt_completion_tasks(self):
+        tasks = []
+        if self.quit_var.get():
+            tasks.append('Quit the application')
+        if self.import_oscar_var.get():
+            tasks.append('Import data into OSCAR')
+
+        if tasks:
+            tasks_str = ' and '.join(tasks)
+            msg = messagebox.askyesno('Completion Tasks', f'Do you want to {tasks_str}?')
+            if msg:
+                if self.import_oscar_var.get():
+                    self.callbacks.import_cpap_data_with_oscar()
+                if self.quit_var.get():
+                    self.main_window.quit()
+        else:
+            # If neither task is selected, do nothing
+            pass
+
+    def handle_no_files(self):
+        logging.info("No new files to transfer.")
+        self.is_running = False
+        set_default_button_states(self)
+        self.builder.get_object('progress_bar')['value'] = 0
+        tasks = []
+        if self.quit_var.get():
+            tasks.append('Quit the application')
+        if self.import_oscar_var.get():
+            tasks.append('Import data into OSCAR')
+
+        if tasks:
+            tasks_str = ' and '.join(tasks)
+            msg = messagebox.askyesno('No New Files', f'No new files to transfer. Do you want to {tasks_str}?')
+            if msg:
+                if self.import_oscar_var.get():
+                    self.callbacks.import_cpap_data_with_oscar()
+                if self.quit_var.get():
+                    self.main_window.quit()
+        else:
+            self.update_status('No new files to transfer.', 'info')
 
     def start_worker(self):
         # Create and start the worker thread with the current app context

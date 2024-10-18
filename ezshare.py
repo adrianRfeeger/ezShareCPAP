@@ -7,6 +7,7 @@ from urllib3.util import Retry
 from wifi_utils import ConnectionManager
 from file_ops import recursive_traversal, list_dir
 import urllib.parse
+import time
 
 class ezShare:
     def __init__(self):
@@ -80,20 +81,32 @@ class ezShare:
         self.update_status('Starting process...')
         if self.ssid:
             self.update_status(f'Connecting to {self.ssid}...')
-            try:
-                self.connection_manager.connect(self.ssid, self.psk)
-                if not self.connection_manager.connected or not self._is_running:
-                    raise RuntimeError("Failed to connect to Wi-Fi or process was canceled.")
+            retries = self.retries
+            while retries > 0 and self._is_running:
+                try:
+                    self.connection_manager.connect(self.ssid, self.psk)
+                    if not self.connection_manager.connected or not self._is_running:
+                        raise RuntimeError("Failed to connect to Wi-Fi or process was canceled.")
 
-                if not self.connection_manager.verify_connection():
-                    raise RuntimeError("Failed to verify Wi-Fi connection.")
+                    if not self.connection_manager.verify_connection():
+                        raise RuntimeError("Failed to verify Wi-Fi connection.")
 
-                self.update_status(f'Connected to {self.ssid}.')
-                self.connected = True
-                self.session = requests.Session()
-                self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
-            except RuntimeError as e:
-                self.update_status(f'Failed to connect to {self.ssid} or process canceled.', 'error')
+                    self.update_status(f'Connected to {self.ssid}.')
+                    self.connected = True
+                    self.session = requests.Session()
+                    self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
+                    break  # Exit the retry loop on successful connection
+                except RuntimeError as e:
+                    retries -= 1
+                    self.update_status(f'Connection attempt failed: {e}. Retries left: {retries}', 'error')
+                    if retries == 0:
+                        self.update_status(f'Failed to connect to {self.ssid} after multiple attempts.', 'error')
+                        return
+                    else:
+                        time.sleep(self.connection_delay)  # Wait before retrying
+
+            if not self.connected:
+                # If we couldn't connect after retries, exit the run method
                 return
 
             self.run_after_connection_delay()
@@ -132,6 +145,8 @@ class ezShare:
         self.update_status(f'Total files to sync: {self.total_files}')
         if self.total_files == 0:
             self.update_status('All files are up to date. No files to sync. Process completed.')
+            if self.progress_callback:
+                self.progress_callback('no_files')
             return
 
         self.processed_files = recursive_traversal(
