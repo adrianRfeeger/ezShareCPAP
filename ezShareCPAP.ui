@@ -537,7 +537,7 @@
     <property name="minsize">420|400</property>
     <property name="resizable">none</property>
     <property name="takefocus">true</property>
-    <property name="title" translatable="yes">Select Folder on ez Share SD card</property>
+    <property name="title" translatable="yes">Transfer Hisory and Files</property>
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="frame5">
@@ -549,15 +549,84 @@
           <property name="side">top</property>
         </layout>
         <child>
-          <object class="ttk.Treeview" id="treeview1" named="True">
-            <property name="cursor">based_arrow_down</property>
-            <property name="selectmode">browse</property>
-            <property name="show">tree</property>
+          <object class="ttk.Frame" id="frame7">
+            <property name="height">200</property>
+            <property name="width">200</property>
             <layout manager="pack">
               <property name="expand">true</property>
               <property name="fill">both</property>
               <property name="side">top</property>
             </layout>
+            <child>
+              <object class="ttk.Frame" id="frame8">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="side">left</property>
+                </layout>
+                <child>
+                  <object class="ttk.Treeview" id="treeview1" named="True">
+                    <property name="cursor">based_arrow_down</property>
+                    <property name="selectmode">browse</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="side">top</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Frame" id="frame9">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="side">left</property>
+                </layout>
+                <child>
+                  <object class="ttk.Treeview" id="treeview3">
+                    <property name="selectmode">extended</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="side">top</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="deleteTransfer" named="True">
+                    <property name="style">Toolbutton</property>
+                    <property name="text" translatable="yes">Delete Record</property>
+                    <layout manager="pack">
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="deleteFiles" named="True">
+                    <property name="style">Toolbutton</property>
+                    <property name="text" translatable="yes">Delete Files</property>
+                    <layout manager="pack">
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Button" id="showFiles" named="True">
+                    <property name="style">Toolbutton</property>
+                    <property name="text" translatable="yes">Show In Finder</property>
+                    <layout manager="pack">
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
         <child>
@@ -565,7 +634,7 @@
             <property name="height">300</property>
             <property name="width">200</property>
             <layout manager="pack">
-              <property name="side">top</property>
+              <property name="side">right</property>
             </layout>
             <child>
               <object class="ttk.Button" id="button1" named="True">
