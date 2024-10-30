@@ -75,7 +75,7 @@ class EzShareCPAPUI:
     def show_about_dialog(self):
         about_message = (
             "ezShareCPAP\n"
-            "Version 0.0.7\n"
+            "Version 0.0.8\n"
             "This application downloads CPAP data from an ez Share Wi-Fi SD card and imports it into OSCAR."
         )
         messagebox.showinfo("About ezShareCPAP", about_message)
