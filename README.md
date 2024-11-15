@@ -170,11 +170,11 @@ The GUI provides an intuitive way to configure and run the file synchronization 
    - Observe the **Progress Bar** and **Status Bar** for updates.
 
 5. **Import Data with OSCAR (Optional):**
-   - If **Import With OSCAR** is checked, the application will attempt to import the data into OSCAR after synchronization.
+   - If **Open OSCAR** is checked, the application will attempt to import the data into OSCAR after synchronization.
 
 6. **Completion:**
    - The application will display a completion message.
-   - If **Quit After Completion** is checked, the application will close automatically.
+   - If **Quit** is checked, the application will close automatically.
 
 ## File Structure
 
