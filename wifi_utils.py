@@ -88,18 +88,26 @@ class ConnectionManager:
                 logger.exception(f"Exception during Wi-Fi disconnection: {e}")
                 return False
 
-    def verify_connection(self):
+    def verify_connection(self, max_attempts=10):
         logger.debug(f"Verifying Wi-Fi connection on interface {self.interface} by pinging 192.168.4.1.")
-        try:
-            ping_command = ["ping", "-c", "2", "192.168.4.1"]
-            result = subprocess.run(ping_command, capture_output=True, text=True)
+        attempt_count = 0
+        while attempt_count < max_attempts:
+            try:
+                ping_command = ["ping", "-c", "2", "192.168.4.1"]
+                result = subprocess.run(ping_command, capture_output=True, text=True)
 
-            if result.returncode == 0:
-                logger.info(f"Ping successful on interface {self.interface}. Connection verified.")
-                return True
-            else:
-                logger.error(f"Ping failed: {result.stderr}")
-                return False
-        except Exception as e:
-            logger.exception(f"Exception during ping: {e}")
-            return False
+                if result.returncode == 0:
+                    logger.info(f"Ping successful on interface {self.interface}. Connection verified.")
+                    return True
+                else:
+                    logger.warning(f"Ping failed (attempt {attempt_count + 1}/{max_attempts}): {result.stderr}")
+                    attempt_count += 1
+                    continue
+            except Exception as e:
+                logger.exception(f"Exception during ping (attempt {attempt_count + 1}/{max_attempts}): {e}")
+                attempt_count += 1
+                continue
+
+        logger.error(f"Failed to verify connection after {max_attempts} attempts.")
+        return False
+
