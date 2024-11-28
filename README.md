@@ -44,7 +44,14 @@ ezShareCPAP is a macOS application designed to download files from an [ez Share 
    - **Note:** You might need to adjust your security settings to allow running applications from unidentified developers:
      - Go to **System Preferences** > **Security & Privacy** > **General** tab.
      - Click **Open Anyway** next to the message about ezShareCPAP being blocked.
-
+       
+5. **Update Accessability:**
+    1. Open **System Preferences** > **Security & Privacy** > **Privacy** tab.
+    2. Select **Accessibility** from the left pane.
+    3. Click the lock icon to make changes and enter your password.
+    4. Ensure **ezShareCPAP** is listed and checked. If not, click the **'+'** button and add the ezShareCPAP application.
+    5. If ezShareCPAP is already listed and enabled, try removing it and re-adding it.
+![image](https://github.com/user-attachments/assets/046be7ac-c767-4325-8c6c-f3b30778b2d0)
 ### From Source
 
 1. **Clone the Repository:**
