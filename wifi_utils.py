@@ -1,6 +1,7 @@
 # wifi_utils.py (macOS-only)
 # Robust Wi‑Fi helper for ez Share on macOS: strong verification (SSID/BSSID/subnet/ping),
-# resilient SSID detection (networksetup/airport/wdutil/scutil), and optional monitoring.
+# resilient SSID detection (networksetup/airport/wdutil/scutil), optional monitoring,
+# and macOS auto-join control (temporary forget + restore + rejoin previous).
 
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,41 @@ class _MacOS:
         if st is False:
             _run(["networksetup", "-setairportpower", self.iface, "on"])
             time.sleep(1.0)  # allow radio to come up
+
+    # ---- Preferred networks helpers ----
+    def list_preferred(self) -> List[str]:
+        """Return preferred SSID list in order (1-based shown by macOS, we return plain list)."""
+        if not self.iface and not self._find_wifi_iface():
+            return []
+        cp = _run(["networksetup", "-listpreferredwirelessnetworks", self.iface])
+        ssids: List[str] = []
+        for line in cp.stdout.splitlines():
+            # lines look like: "    1) MyHomeWiFi"
+            m = re.search(r"^\s*\d+\)\s+(.*)$", line)
+            if m:
+                ssids.append(m.group(1).strip())
+        return ssids
+
+    def remove_preferred(self, ssid: str) -> bool:
+        """Forget SSID from preferred list so macOS won't auto-join later."""
+        if not self.iface and not self._find_wifi_iface():
+            return False
+        cp = _run(["networksetup", "-removepreferredwirelessnetwork", self.iface, ssid])
+        # rc==0 even if SSID wasn't present on some macOS versions; that's fine.
+        return cp.returncode == 0
+
+    def add_preferred_at_index(self, ssid: str, psk: Optional[str], index: int) -> bool:
+        """
+        Re-add SSID at a given priority. We assume WPA2 (typical for ez Share).
+        If psk is None, macOS will try Keychain; otherwise we pass it.
+        """
+        if not self.iface and not self._find_wifi_iface():
+            return False
+        args = ["networksetup", "-addpreferredwirelessnetworkatindex", self.iface, ssid, str(index), "WPA2"]
+        if psk:
+            args.append(psk)
+        cp = _run(args)
+        return cp.returncode == 0
 
     # ---- Connect / Disconnect ----
     def connect(self, ssid: str, psk: Optional[str]) -> bool:
@@ -176,6 +212,13 @@ class ConnectionManager:
         self._lock = threading.Lock()
         self.connected: bool = False
 
+        # For auto-join control / restoration
+        self._prev_ssid: Optional[str] = None
+        self._target_ssid: Optional[str] = None
+        self._target_psk: Optional[str] = None
+        self._target_pref_existed: bool = False
+        self._target_pref_index: Optional[int] = None  # 1-based index in macOS UI
+
     # convenience getter
     def current_ssid_bssid(self) -> Tuple[Optional[str], Optional[str]]:
         return self._os.current_ssid_bssid()
@@ -183,17 +226,74 @@ class ConnectionManager:
     # connect / disconnect
     def connect(self, ssid: str, psk: Optional[str]) -> bool:
         with self._lock:
-            logger.info("Connecting to SSID=%r", ssid)
+            # Remember where we were so we can put it back later.
+            self._prev_ssid, _ = self._os.current_ssid_bssid()
+
+            # Track the target + its previous preferred state
+            self._target_ssid = ssid
+            self._target_psk = psk
+            prefs = self._os.list_preferred()
+            try:
+                self._target_pref_index = (prefs.index(ssid) + 1)  # convert to 1-based
+                self._target_pref_existed = True
+                logger.info("Target SSID %r is in preferred list at index %d; temporarily removing to prevent Auto-Join.",
+                            ssid, self._target_pref_index)
+                # Temporarily remove so macOS won't auto-join later
+                self._os.remove_preferred(ssid)
+            except ValueError:
+                self._target_pref_index = None
+                self._target_pref_existed = False
+                logger.info("Target SSID %r was not in preferred list (good).", ssid)
+
+            logger.info("Connecting to SSID=%r (previous was %r)", ssid, self._prev_ssid)
             ok = self._os.connect(ssid, psk)
             if not ok:
                 logger.warning("Association command failed.")
             return ok
+
+    def _restore_or_forget_target_preference(self):
+        """After we're done, restore previous preference if it existed; otherwise ensure it's forgotten."""
+        if not self._target_ssid:
+            return
+        if self._target_pref_existed:
+            # Put it back where it was
+            idx = self._target_pref_index or 1
+            logger.info("Restoring preferred network %r at original index %d.", self._target_ssid, idx)
+            try:
+                self._os.add_preferred_at_index(self._target_ssid, self._target_psk, idx)
+            except Exception:
+                logger.exception("Failed to restore preferred network %r", self._target_ssid)
+        else:
+            # Make sure it stays forgotten
+            try:
+                self._os.remove_preferred(self._target_ssid)
+                logger.info("Ensured %r remains forgotten (no future auto-join).", self._target_ssid)
+            except Exception:
+                logger.exception("Failed ensuring %r remains forgotten", self._target_ssid)
+
+    def reconnect_previous(self) -> bool:
+        """Best-effort hop back to previous SSID after we’re done."""
+        if not self._prev_ssid:
+            return False
+        logger.info("Rejoining previous SSID=%r", self._prev_ssid)
+        # We don't know its PSK; rely on Keychain/known networks
+        return self._os.connect(self._prev_ssid, None)
 
     def disconnect(self) -> bool:
         with self._lock:
             logger.info("Disconnecting (toggle/reset).")
             ok = self._os.disconnect()
             self.connected = False
+
+            # Restore or purge the target from Preferred Networks to control Auto-Join behavior
+            self._restore_or_forget_target_preference()
+
+            # Then rejoin previous SSID (best effort)
+            try:
+                self.reconnect_previous()
+            except Exception:
+                logger.exception("Failed rejoining previous SSID")
+
             return ok
 
     # verification
