@@ -57,7 +57,7 @@ class _MacOS:
                 # handles “Wi‑Fi” vs “Wi-Fi”
                 current_is_wifi = ("Wi-Fi" in line) or ("Wi‑Fi" in line)
             elif line.strip().startswith("Device:"):
-                dev = line.split(":", 1)[1].strip()
+                dev = line.split(":", 1)[-1].strip()
                 if current_is_wifi and dev:
                     logger.info("macOS Wi‑Fi interface=%s", dev)
                     return dev
