@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import pygubu
 import threading
-from wifi_utils import WiFiManager, VerifySpec
+from wifi_utils import ConnectionManager
 from ezshare import ezShare
 from file_ops import list_dir
 from status_manager import update_status
@@ -11,7 +11,6 @@ from utils import resource_path, update_button_state
 import logging
 import urllib.parse
 import requests
-
 
 class FolderSelectorDialog:
     def __init__(self, master, main_window):
@@ -36,7 +35,7 @@ class FolderSelectorDialog:
         # Initialize the Treeview
         self.treeview = self.builder.get_object('folder_select')
 
-        # Load icons
+        # Load icons 
         self.folder_icon = tk.PhotoImage(file=resource_path("folder.png"))
         self.file_icon = tk.PhotoImage(file=resource_path("file.png"))
         self.sdcard_icon = tk.PhotoImage(file=resource_path("sdcard.png"))
@@ -49,8 +48,8 @@ class FolderSelectorDialog:
         # Initialize ezShare instance
         self.ezshare = ezShare()
 
-        # Initialize WiFi manager (replaces ConnectionManager)
-        self.wifi = WiFiManager()
+        # Initialize ConnectionManager
+        self.connection_manager = ConnectionManager()
 
         # Bind the selection event to control selection
         self.treeview.bind('<<TreeviewSelect>>', self.on_treeview_select)
@@ -85,25 +84,18 @@ class FolderSelectorDialog:
         base_url = 'http://192.168.4.1/dir?dir=A:'
 
         try:
-            # UI update must be on main thread
-            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi‑Fi...'))
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connecting to ez Share Wi-Fi...'))
 
-            # Strong verification spec: SSID + expected subnet + ping gateway
-            spec = VerifySpec(
-                expected_ssid=ssid,
-                expected_subnet_prefix="192.168.4.",
-                gateway_ip="192.168.4.1",
-            )
+            self.connection_manager.connect(ssid, psk)
 
-            # Ensure connected + verified
-            ok = self.wifi.ensure_connected(ssid, psk, verify=spec)
-            if not ok or self.stop_thread or not self.main_window.is_running:
-                raise RuntimeError("Failed to connect/verify Wi‑Fi or process was canceled.")
+            if not self.connection_manager.connected or self.stop_thread or not self.main_window.is_running:
+                raise RuntimeError("Failed to connect or process was canceled.")
 
-            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi‑Fi.'))
+            # Verify the connection
+            if not self.connection_manager.verify_connection():
+                raise RuntimeError("Failed to verify Wi-Fi connection.")
 
-            # OPTIONAL: keep it verified during longer browsing (uncomment if you like)
-            # self.wifi.start_monitor(ssid, psk, verify=spec)
+            self.main_window.main_window.after(0, lambda: update_status(self.main_window, 'Connected to ez Share Wi-Fi.'))
 
             # Set up the session with retries
             self.ezshare.session = requests.Session()
@@ -114,38 +106,15 @@ class FolderSelectorDialog:
 
             # Populate the treeview using the fetched directory structure
             if self.treeview.winfo_exists() and not self.stop_thread:
-                root_node = self.treeview.insert(
-                    '', 'end',
-                    text=' ez Share® Wi‑Fi SD card',
-                    open=True,
-                    image=self.sdcard_icon,
-                    tags=('folder', base_url)
-                )
+                root_node = self.treeview.insert('', 'end', text=' ez Share® Wi-Fi SD card', open=True, image=self.sdcard_icon, tags=('folder', base_url))
                 self._populate_treeview_node(root_node, self.directory_structure)
 
         except RuntimeError as e:
-            error_message = f'Failed to connect to Wi‑Fi or process canceled: {e}'
+            error_message = f'Failed to connect to Wi-Fi or process canceled: {e}'
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, error_message, 'error'))
         finally:
-            # Always cleanup Wi‑Fi and prevent auto‑rejoin; also restore previous network
-            try:
-                if self.wifi.connected:
-                    prev = getattr(self.wifi, '_prev_ssid', None)
-                    self.wifi.disconnect_forget_and_restore(ssid, restore_previous=True)
-                    restored = prev if prev and prev != ssid else None
-                    self.main_window.main_window.after(
-                        0,
-                        lambda: update_status(
-                            self.main_window,
-                            'Disconnected and removed EzShare from Preferred Networks.',
-                            'info',
-                            restored_ssid=restored,
-                        ),
-                    )
-            except Exception as e:
-                logging.exception('Wi‑Fi cleanup failed in FolderSelectorDialog')
-                self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Wi‑Fi cleanup issue: {e}', 'error'))
-
+            if self.connection_manager.connected:
+                self.connection_manager.disconnect(ssid)
             self.main_window.main_window.after(0, self.ensure_treeview_populated)
 
             # Set the `is_running` flag to False, allowing the "Ready" status to be set
@@ -155,7 +124,7 @@ class FolderSelectorDialog:
     def _fetch_directory_contents(self, url):
         """
         Recursively fetch all files and directories from the server and store them in a nested dictionary.
-
+        
         :param url: The URL of the directory to start fetching from.
         :return: A nested dictionary with directories and their contents.
         """
@@ -198,7 +167,7 @@ class FolderSelectorDialog:
 
         # Check if the treeview has more than one item (excluding the root node)
         if len(self.treeview.get_children('')) > 0:
-            self.show_dialog()
+            self.main_window.main_window.after(0, self.show_dialog)
         else:
             # Retry after a short delay if not populated yet
             self.main_window.main_window.after(100, self.ensure_treeview_populated)
@@ -212,7 +181,7 @@ class FolderSelectorDialog:
         # Cancel any existing timer
         if self.status_timer:
             self.main_window.main_window.after_cancel(self.status_timer)
-
+        
         # Set a new timer to reset status to "Ready."
         self.status_timer = self.main_window.main_window.after(5000, self.reset_status)
 
@@ -225,7 +194,7 @@ class FolderSelectorDialog:
     def close_dialog(self, event=None):
         if self.dialog.winfo_exists():
             self.dialog.destroy()
-
+        
         # Re-enable UI elements after the folder selector is closed
         self.main_window.enable_ui_elements()
 
