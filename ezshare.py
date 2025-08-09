@@ -96,12 +96,12 @@ class ezShare:
                 # Strong verification: SSID + expected subnet + ping gateway
                 spec = VerifySpec(
                     expected_ssid=self.ssid,
-                    expected_subnet_prefix="192.168.4.",
-                    gateway_ip="192.168.4.1",
+                    expected_subnet_prefix='192.168.4.',
+                    gateway_ip='192.168.4.1',
                 )
                 ok = self.wifi.ensure_connected(self.ssid, self.psk, verify=spec)
                 if not ok or not self._is_running:
-                    raise RuntimeError("Failed to connect/verify Wi‑Fi or process was canceled.")
+                    raise RuntimeError('Failed to connect/verify Wi‑Fi or process was canceled.')
 
                 self.update_status(f'Connected to {self.ssid}.')
                 self.connected = True
@@ -128,12 +128,16 @@ class ezShare:
 
         self.run_after_connection_delay()
 
-        # Disconnect after work is done
+        # Disconnect + forget after work is done (prevents macOS auto-rejoin)
         if self.connected:
-            # self.wifi.stop_monitor()  # only needed if you enabled the monitor above
-            self.wifi.disconnect()
-            self.update_status('Disconnected from Wi-Fi.')
-            self.connected = False
+            try:
+                self.wifi.disconnect_forget_and_restore(self.ssid, restore_previous=True)
+                self.update_status('Disconnected and removed EzShare from Preferred Networks.')
+            except Exception as e:
+                logging.exception('Wi‑Fi cleanup failed')
+                self.update_status(f'Wi‑Fi cleanup issue: {e}', 'error')
+            finally:
+                self.connected = False
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
@@ -178,6 +182,11 @@ class ezShare:
         self._is_running = False
         self.update_status('Process stopped by user.', 'info')
         if self.connected:
-            # self.wifi.stop_monitor()  # only needed if you enabled the monitor above
-            self.wifi.disconnect()
-            self.connected = False
+            try:
+                self.wifi.disconnect_forget_and_restore(self.ssid, restore_previous=True)
+                self.update_status('Disconnected and removed EzShare from Preferred Networks.')
+            except Exception as e:
+                logging.exception('Wi‑Fi cleanup failed during stop')
+                self.update_status(f'Wi‑Fi cleanup issue: {e}', 'error')
+            finally:
+                self.connected = False

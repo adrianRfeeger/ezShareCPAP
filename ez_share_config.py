@@ -122,14 +122,24 @@ class EzShareConfig:
             ))
             logging.error(f"Failed to reach HTTP server: {e}")
         finally:
-            # Disconnect after attempting to open the page (or keep if you prefer manual control)
+            # Disconnect after attempting to open the page; also forget EzShare and restore previous network
             try:
                 if self.wifi.connected:
-                    self.wifi.disconnect()
+                    ssid = self.app.builder.get_object('ssid_entry').get()
+                    prev = getattr(self.wifi, '_prev_ssid', None)
+                    self.wifi.disconnect_forget_and_restore(ssid, restore_previous=True)
                     self.is_connected = False
-                    logging.info("Wi‑Fi disconnected after configuration attempt.")
+                    restored = prev if prev and prev != ssid else None
+                    logging.info("Wi‑Fi disconnected and EzShare removed from Preferred Networks.")
+                    self.app.main_window.after(0, lambda: update_status(
+                        self.app,
+                        'Disconnected and removed EzShare from Preferred Networks.',
+                        'info',
+                        restored_ssid=restored,
+                    ))
             except Exception as e:
                 logging.error(f"Error while disconnecting Wi‑Fi: {e}")
+                self.app.main_window.after(0, lambda: update_status(self.app, f'Wi‑Fi cleanup issue: {e}', 'error'))
 
             self._cleanup()
 
@@ -140,11 +150,21 @@ class EzShareConfig:
 
         try:
             if self.wifi.connected:
-                self.wifi.disconnect()
-                logging.info("Wi‑Fi disconnection attempted.")
+                ssid = self.app.builder.get_object('ssid_entry').get()
+                prev = getattr(self.wifi, '_prev_ssid', None)
+                self.wifi.disconnect_forget_and_restore(ssid, restore_previous=True)
+                restored = prev if prev and prev != ssid else None
+                logging.info("Wi‑Fi disconnection + forget attempted.")
+                self.app.main_window.after(0, lambda: update_status(
+                    self.app,
+                    'Disconnected and removed EzShare from Preferred Networks.',
+                    'info',
+                    restored_ssid=restored,
+                ))
                 self.is_connected = False
         except Exception as e:
             logging.error(f"Error while disconnecting Wi‑Fi: {e}")
+            self.app.main_window.after(0, lambda: update_status(self.app, f'Wi‑Fi cleanup issue: {e}', 'error'))
 
         self._cleanup()
 

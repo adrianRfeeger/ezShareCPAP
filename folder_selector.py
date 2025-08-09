@@ -127,8 +127,25 @@ class FolderSelectorDialog:
             error_message = f'Failed to connect to Wi‑Fi or process canceled: {e}'
             self.main_window.main_window.after(0, lambda: update_status(self.main_window, error_message, 'error'))
         finally:
-            if self.wifi.connected:
-                self.wifi.disconnect()
+            # Always cleanup Wi‑Fi and prevent auto‑rejoin; also restore previous network
+            try:
+                if self.wifi.connected:
+                    prev = getattr(self.wifi, '_prev_ssid', None)
+                    self.wifi.disconnect_forget_and_restore(ssid, restore_previous=True)
+                    restored = prev if prev and prev != ssid else None
+                    self.main_window.main_window.after(
+                        0,
+                        lambda: update_status(
+                            self.main_window,
+                            'Disconnected and removed EzShare from Preferred Networks.',
+                            'info',
+                            restored_ssid=restored,
+                        ),
+                    )
+            except Exception as e:
+                logging.exception('Wi‑Fi cleanup failed in FolderSelectorDialog')
+                self.main_window.main_window.after(0, lambda: update_status(self.main_window, f'Wi‑Fi cleanup issue: {e}', 'error'))
+
             self.main_window.main_window.after(0, self.ensure_treeview_populated)
 
             # Set the `is_running` flag to False, allowing the "Ready" status to be set
@@ -181,7 +198,7 @@ class FolderSelectorDialog:
 
         # Check if the treeview has more than one item (excluding the root node)
         if len(self.treeview.get_children('')) > 0:
-            self.main_window.main_window.after(0, self.show_dialog)
+            self.show_dialog()
         else:
             # Retry after a short delay if not populated yet
             self.main_window.main_window.after(100, self.ensure_treeview_populated)
