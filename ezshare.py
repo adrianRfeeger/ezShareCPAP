@@ -4,10 +4,11 @@ import logging
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from wifi_utils import ConnectionManager
+from wifi_utils import WiFiManager, VerifySpec
 from file_ops import recursive_traversal, list_dir
 import urllib.parse
 import time
+
 
 class ezShare:
     def __init__(self):
@@ -35,10 +36,14 @@ class ezShare:
         self._is_running = True
         self._configure_logging()
         self.retry_policy = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        self.connection_manager = ConnectionManager()
+        # swapped ConnectionManager -> WiFiManager
+        self.wifi = WiFiManager()
 
     def _configure_logging(self):
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+        logging.basicConfig(
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            level=logging.INFO
+        )
 
     def set_params(self, path, url, start_time, show_progress, verbose,
                    overwrite, keep_old, ssid, psk, ignore, retries, connection_delay, debug):
@@ -79,46 +84,56 @@ class ezShare:
 
     def run(self):
         self.update_status('Starting process...')
-        if self.ssid:
-            self.update_status(f'Connecting to {self.ssid}...')
-            retries = self.retries
-            while retries > 0 and self._is_running:
-                try:
-                    self.connection_manager.connect(self.ssid, self.psk)
-                    if not self.connection_manager.connected or not self._is_running:
-                        raise RuntimeError("Failed to connect to Wi-Fi or process was canceled.")
-
-                    if not self.connection_manager.verify_connection():
-                        raise RuntimeError("Failed to verify Wi-Fi connection.")
-
-                    self.update_status(f'Connected to {self.ssid}.')
-                    self.connected = True
-                    self.session = requests.Session()
-                    self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
-                    break  # Exit the retry loop on successful connection
-                except RuntimeError as e:
-                    retries -= 1
-                    self.update_status(f'Connection attempt failed: {e}. Retries left: {retries}', 'error')
-                    if retries == 0:
-                        self.update_status(f'Failed to connect to {self.ssid} after multiple attempts.', 'error')
-                        return
-                    else:
-                        time.sleep(self.connection_delay)  # Wait before retrying
-
-            if not self.connected:
-                # If we couldn't connect after retries, exit the run method
-                return
-
-            self.run_after_connection_delay()
-
-            if self.connected:
-                self.connection_manager.disconnect(self.ssid)
-                self.update_status('Disconnected from Wi-Fi.')
-                self.connected = False
-
-        else:
+        if not self.ssid:
             self.update_status('No SSID provided, cannot connect to Wi-Fi.', 'error')
             return
+
+        self.update_status(f'Connecting to {self.ssid}...')
+        retries = self.retries
+
+        while retries > 0 and self._is_running:
+            try:
+                # Strong verification: SSID + expected subnet + ping gateway
+                spec = VerifySpec(
+                    expected_ssid=self.ssid,
+                    expected_subnet_prefix="192.168.4.",
+                    gateway_ip="192.168.4.1",
+                )
+                ok = self.wifi.ensure_connected(self.ssid, self.psk, verify=spec)
+                if not ok or not self._is_running:
+                    raise RuntimeError("Failed to connect/verify Wi‑Fi or process was canceled.")
+
+                self.update_status(f'Connected to {self.ssid}.')
+                self.connected = True
+
+                # HTTP session with retries
+                self.session = requests.Session()
+                self.session.mount('http://', HTTPAdapter(max_retries=self.retry_policy))
+
+                # OPTIONAL: keep connection verified during long transfers
+                # self.wifi.start_monitor(self.ssid, self.psk, verify=spec)
+
+                break  # success
+            except RuntimeError as e:
+                retries -= 1
+                self.update_status(f'Connection attempt failed: {e}. Retries left: {retries}', 'error')
+                if retries == 0:
+                    self.update_status(f'Failed to connect to {self.ssid} after multiple attempts.', 'error')
+                    return
+                time.sleep(self.connection_delay)
+
+        if not self.connected:
+            # If we couldn't connect after retries, exit the run method
+            return
+
+        self.run_after_connection_delay()
+
+        # Disconnect after work is done
+        if self.connected:
+            # self.wifi.stop_monitor()  # only needed if you enabled the monitor above
+            self.wifi.disconnect()
+            self.update_status('Disconnected from Wi-Fi.')
+            self.connected = False
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
@@ -141,8 +156,10 @@ class ezShare:
         self.path.mkdir(parents=True, exist_ok=True)
         self.update_status(f'Using path: {self.path}')
         self.update_status('Scanning for files to download...')
+
         self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
         self.update_status(f'Total files to sync: {self.total_files}')
+
         if self.total_files == 0:
             self.update_status('All files are up to date. No files to sync. Process completed.')
             if self.progress_callback:
@@ -150,7 +167,8 @@ class ezShare:
             return
 
         self.processed_files = recursive_traversal(
-            self, self.url, self.path, self.total_files, self.processed_files, lambda: self._is_running)
+            self, self.url, self.path, self.total_files, self.processed_files, lambda: self._is_running
+        )
         if self.processed_files == self.total_files:
             self.update_status('File transfer completed successfully.')
         else:
@@ -160,5 +178,6 @@ class ezShare:
         self._is_running = False
         self.update_status('Process stopped by user.', 'info')
         if self.connected:
-            self.connection_manager.disconnect(self.ssid)
+            # self.wifi.stop_monitor()  # only needed if you enabled the monitor above
+            self.wifi.disconnect()
             self.connected = False
