@@ -3,7 +3,37 @@
 
 ## Overview
 
-ezShareCPAP is a macOS application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualization.
+ezShareCPAP is a macOS application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualisation.
+
+## OSCAR Compatibility
+
+This application is compatible with:
+- **OSCAR 1.x** (legacy versions 1.7.0 and earlier)
+- **OSCAR 2.0.0+** (current release with SQL database backend)
+
+### Version-Specific Details
+
+#### OSCAR 2.0.0+ (Recommended)
+- **Status:** Fully supported ✅
+- **Features:** SQL database backend, improved data analysis, CSV export
+- **Import Method:** File → Import → CPAP Card (new menu structure)
+- **Auto-Detection:** ezShareCPAP automatically detects and uses the OSCAR 2.0.0+ import method
+- **Release Date:** June 5, 2026
+
+#### OSCAR 1.x (Legacy)
+- **Status:** Fully supported for backward compatibility ✅
+- **Versions:** 1.7.0 and earlier
+- **Import Method:** File → Import CPAP Card Data (legacy menu structure)
+- **Auto-Detection:** Automatic fallback if OSCAR 2.0.0+ method fails
+
+### Auto-Detection
+The app automatically detects your installed OSCAR version and uses the appropriate import method. You can view the detected version in the **Help → About** dialog within the application.
+
+### Troubleshooting OSCAR Integration
+- If import fails, ensure OSCAR is running and in focus
+- Grant accessibility permissions to ezShareCPAP (see Permissions section)
+- Check that OSCAR is installed in the default `/Applications/OSCAR.app` location
+- Verify your OSCAR version by opening OSCAR and checking Help → About
 
 ## Features
 
@@ -259,6 +289,17 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 ## Support
 
 If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/issues) with details of the problem.
+
+## Changelog
+
+### Version 0.1.0 (OSCAR 2.0.0 Compatible)
+- **New:** Full compatibility with OSCAR 2.0.0 (SQL database backend)
+- **New:** Automatic OSCAR version detection
+- **New:** Display detected OSCAR version in About dialog
+- **Improved:** Dual import method support for OSCAR 1.x and OSCAR 2.0.0+
+- **Improved:** Better error handling and fallback mechanisms for OSCAR import
+- **Fixed:** AppleScript compatibility with OSCAR's updated menu structure
+- Bumped version from 0.0.9 to 0.1.0 to reflect OSCAR 2.0.0 support
 
 ## License
 

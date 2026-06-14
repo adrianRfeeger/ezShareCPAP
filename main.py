@@ -10,7 +10,7 @@ from config_manager import ConfigManager
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
-from utils import ensure_and_check_disk_access, resource_path, initialize_button_states, set_default_button_states, set_process_button_states, get_button_state
+from utils import ensure_and_check_disk_access, resource_path, initialize_button_states, set_default_button_states, set_process_button_states, get_button_state, get_oscar_version
 from worker import EzShareWorker
 
 class EzShareCPAPUI:
@@ -73,10 +73,18 @@ class EzShareCPAPUI:
         self.main_window.config(menu=menubar)
 
     def show_about_dialog(self):
+        oscar_version = get_oscar_version()
+        oscar_info = f"OSCAR: {oscar_version}" if oscar_version else "OSCAR: Not installed"
+        
         about_message = (
             "ezShareCPAP\n"
-            "Version 0.0.9\n"
-            "This application downloads CPAP data from an ez Share Wi-Fi SD card and imports it into OSCAR."
+            "Version 0.1.0\n"
+            "Compatible with OSCAR 1.x and OSCAR 2.0.0+\n"
+            "\n"
+            "This application downloads CPAP data from an ez Share Wi-Fi SD card "
+            "and imports it into OSCAR.\n"
+            "\n"
+            f"{oscar_info}"
         )
         messagebox.showinfo("About ezShareCPAP", about_message)
 

@@ -141,6 +141,59 @@ def check_oscar_installed():
         print(f"Error checking OSCAR installation: {e}")
         return False
 
+def get_oscar_version():
+    """
+    Detect the version of OSCAR installed.
+
+    Returns:
+    str: Version string (e.g., '2.0.0', '1.7.1', 'unknown') or None if OSCAR is not installed.
+    """
+    if not check_oscar_installed():
+        return None
+    
+    try:
+        # Try to get version from OSCAR's info plist
+        result = subprocess.run(
+            ["mdls", "-name", "kMDItemVersion", "-raw", "/Applications/OSCAR.app"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            version = result.stdout.strip()
+            logging.info(f"Detected OSCAR version: {version}")
+            return version
+        
+        # Fallback: try using osascript
+        script = '''
+        tell application "OSCAR"
+            set oscarVersion to version
+            return oscarVersion
+        end tell
+        '''
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            version = result.stdout.strip()
+            logging.info(f"Detected OSCAR version: {version}")
+            return version
+        
+        logging.warning("Could not determine OSCAR version")
+        return "unknown"
+    
+    except subprocess.TimeoutExpired:
+        logging.warning("OSCAR version detection timed out")
+        return "unknown"
+    except Exception as e:
+        logging.error(f"Error detecting OSCAR version: {e}")
+        return "unknown"
+
 def resource_path(relative_path):
     """
     Get the absolute path to the resource, works for dev and for PyInstaller.

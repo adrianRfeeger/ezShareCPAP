@@ -323,7 +323,29 @@ class Callbacks:
             return
 
         logging.info("Importing CPAP data with OSCAR.")
-        script = '''
+        
+        # Try OSCAR 2.0.0+ approach first (which is more reliable)
+        script_20 = '''
+        tell application "OSCAR"
+            activate
+            delay 2
+            tell application "System Events"
+                tell process "OSCAR"
+                    try
+                        click menu item "Import" of menu "File" of menu bar 1
+                        delay 1
+                        click button "CPAP Card" of window 1
+                    on error
+                        -- Fallback for OSCAR 1.x menu structure
+                        click menu item "Import CPAP Card Data" of menu "File" of menu bar 1
+                    end try
+                end tell
+            end tell
+        end tell
+        '''
+        
+        # Fallback script for OSCAR 1.x
+        script_1x = '''
         tell application "OSCAR"
             activate
             delay 2
@@ -334,11 +356,27 @@ class Callbacks:
             end tell
         end tell
         '''
+        
         try:
-            subprocess.run(["osascript", "-e", script], check=True)
+            # Try OSCAR 2.0.0+ first
+            subprocess.run(["osascript", "-e", script_20], timeout=10)
+            logging.info("OSCAR 2.0.0+ import method succeeded.")
+        except subprocess.TimeoutExpired:
+            logging.warning("OSCAR 2.0.0+ import method timed out, attempting OSCAR 1.x method.")
+            try:
+                subprocess.run(["osascript", "-e", script_1x], check=True, timeout=10)
+                logging.info("OSCAR 1.x import method succeeded.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error importing CPAP data with OSCAR: {e}")
+                update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
         except subprocess.CalledProcessError as e:
-            logging.error(f"Error importing CPAP data with OSCAR: {e}")
-            update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
+            logging.warning(f"OSCAR 2.0.0+ import method failed, attempting OSCAR 1.x method: {e}")
+            try:
+                subprocess.run(["osascript", "-e", script_1x], check=True, timeout=10)
+                logging.info("OSCAR 1.x import method succeeded.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error importing CPAP data with OSCAR: {e}")
+                update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
 
     def update_ui_checkboxes(self):
         logging.info("Updating checkboxes based on OSCAR installation status.")
