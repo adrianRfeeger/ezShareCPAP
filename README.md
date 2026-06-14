@@ -3,7 +3,12 @@
 
 ## Overview
 
-ezShareCPAP is a macOS application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualisation.
+ezShareCPAP is a cross-platform application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualisation.
+
+### Supported Platforms
+- **macOS** (Intel and Apple Silicon)
+- **Windows** (10 and later)
+- **Linux** (Ubuntu, Debian, Fedora, and other distributions)
 
 ## OSCAR Compatibility
 
@@ -32,7 +37,10 @@ The app automatically detects your installed OSCAR version and uses the appropri
 ### Troubleshooting OSCAR Integration
 - If import fails, ensure OSCAR is running and in focus
 - Grant accessibility permissions to ezShareCPAP (see Permissions section)
-- Check that OSCAR is installed in the default `/Applications/OSCAR.app` location
+- Check that OSCAR is installed in the default location:
+  - **macOS:** `/Applications/OSCAR.app`
+  - **Windows:** `C:\Program Files\OSCAR\OSCAR.exe`
+  - **Linux:** Available in PATH
 - Verify your OSCAR version by opening OSCAR and checking Help → About
 
 ## Features
@@ -49,40 +57,52 @@ The app automatically detects your installed OSCAR version and uses the appropri
 
 ## Prerequisites
 
-- **macOS Operating System:** The application is macOS-specific due to dependencies on macOS system utilities.
+- **Operating System:** macOS (10.13+), Windows (10+), or Linux (Ubuntu 18.04+, Debian 9+, Fedora 30+, or equivalent)
 - **Python 3.8 or Higher:** Required if installing from source.
 - **Required Python Packages:** Listed in `requirements.txt` (for source installation).
+- **Platform-Specific Tools:**
+  - **macOS:** AppleScript (built-in)
+  - **Windows:** PowerShell 5.0+ (built-in on Windows 10+)
+  - **Linux:** NetworkManager (for Wi-Fi connectivity)
 
 ## Installation
 
-### From Release Version (ensure you pick the right version intel/arm64)
+### From Release Version
 
+#### macOS
 1. **Download the Release Version:**
-
-   - Download the latest release compiled with PyInstaller from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
-2. **Extract the ZIP File:**
-
+   - Download the latest macOS release (Universal Binary for Intel & Apple Silicon) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+2. **Extract and Move to Applications:**
    - Unzip the downloaded file.
-
-3. **Move to Applications Folder:**
-
    - Drag the `ezShareCPAP` application into your `Applications` folder.
+3. **First Run Security:**
+   - Double-click `ezShareCPAP` to launch it.
+   - If blocked, go to **System Preferences** > **Security & Privacy** > **General** and click **Open Anyway**.
+4. **Grant Accessibility Permissions:**
+   - Open **System Preferences** > **Security & Privacy** > **Privacy** > **Accessibility**.
+   - Click the lock icon, enter your password, and add `ezShareCPAP` to the allowed list.
 
-4. **Run the Application:**
+#### Windows
+1. **Download the Release Version:**
+   - Download the latest Windows release (.exe or .zip) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+2. **Install or Extract:**
+   - If installer (`.exe`): Double-click and follow the installation wizard.
+   - If portable (`.zip`): Extract to your desired location.
+3. **First Run:**
+   - Double-click `ezShareCPAP.exe` to launch.
+   - Windows may show a security warning; click **More info** → **Run anyway** to proceed.
 
-   - Double-click the `ezShareCPAP` application to launch it.
-   - **Note:** You might need to adjust your security settings to allow running applications from unidentified developers:
-     - Go to **System Preferences** > **Security & Privacy** > **General** tab.
-     - Click **Open Anyway** next to the message about ezShareCPAP being blocked.
-       
-5. **Update Accessability:**
-    1. Open **System Preferences** > **Security & Privacy** > **Privacy** tab.
-    2. Select **Accessibility** from the left pane.
-    3. Click the lock icon to make changes and enter your password.
-    4. Ensure **ezShareCPAP** is listed and checked. If not, click the **'+'** button and add the ezShareCPAP application.
-    5. If ezShareCPAP is already listed and enabled, try removing it and re-adding it.
-![image](https://github.com/user-attachments/assets/046be7ac-c767-4325-8c6c-f3b30778b2d0)
-### From Source
+#### Linux
+1. **Download the Release Version:**
+   - Download the latest Linux release (.AppImage or .tar.gz) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+2. **Extract and Make Executable:**
+   - If AppImage: `chmod +x ezShareCPAP*.AppImage && ./ezShareCPAP*.AppImage`
+   - If tar.gz: `tar -xzf ezShareCPAP*.tar.gz && cd ezShareCPAP && ./ezShareCPAP`
+3. **Install NetworkManager (if needed):**
+   - **Ubuntu/Debian:** `sudo apt install network-manager`
+   - **Fedora:** `sudo dnf install NetworkManager`
+
+### From Source (All Platforms)
 
 1. **Clone the Repository:**
 
@@ -93,9 +113,16 @@ The app automatically detects your installed OSCAR version and uses the appropri
 
 2. **Create and Activate a Virtual Environment:**
 
+   **macOS & Linux:**
    ```bash
    python3 -m venv venv
    source venv/bin/activate
+   ```
+
+   **Windows:**
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
    ```
 
 3. **Install the Required Packages:**
@@ -110,13 +137,20 @@ The app automatically detects your installed OSCAR version and uses the appropri
    python main.py
    ```
 
-## Compiling Standalone Using PyInstaller
+## Building Standalone Executable (All Platforms)
+
+### Using PyInstaller
 
 1. **Activate the Virtual Environment:**
 
+   **macOS & Linux:**
    ```bash
-   cd ezShareCPAP
    source venv/bin/activate
+   ```
+
+   **Windows:**
+   ```bash
+   venv\Scripts\activate
    ```
 
 2. **Install PyInstaller:**
@@ -125,13 +159,16 @@ The app automatically detects your installed OSCAR version and uses the appropri
    pip install pyinstaller
    ```
 
-3. **Compile the Application:**
+3. **Build the Application:**
 
    ```bash
    pyinstaller ezShareCPAP.spec
    ```
 
-   - This will create a standalone executable in the `dist` folder. Move the generated application to your `Applications` folder. Continue install as per the instructions  "From Release Version" from step 4.
+4. **Find Your Executable:**
+   - **macOS:** `dist/ezShareCPAP.app` (move to `/Applications`)
+   - **Windows:** `dist/ezShareCPAP.exe` (add to Start Menu or Desktop)
+   - **Linux:** `dist/ezShareCPAP` (move to `/usr/local/bin` or similar)
 
 ## Usage
 
@@ -228,13 +265,41 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 - `folder_selector.py`: Provides a GUI for selecting folders on the ez Share SD card.
 - `status_manager.py`: Manages status updates and the status bar.
 - `utils.py`: Utility functions for resource paths and permission checks.
-- `wifi_utils.py`: Handles Wi-Fi connections specific to macOS.
+- `wifi_utils.py`: Handles Wi-Fi connections for macOS, Windows, and Linux.
 - `worker.py`: Background worker thread for performing the synchronization process.
 - `ezsharecpap.ui`: PyGubu UI definition file for the GUI.
 - `icon.png`: Icon image used in the application.
 - `folder.png`, `file.png`, `sdcard.png`: Icons used in the folder selector dialog.
 
 ## Troubleshooting
+
+### Platform-Specific Issues
+
+#### macOS
+- **Wi-Fi Connection:**
+  - If connection fails, ensure you've granted Full Disk Access permissions (System Preferences > Security & Privacy > Privacy > Full Disk Access).
+  - Try turning Wi-Fi off and back on in System Preferences if connection is unstable.
+  
+- **Accessibility Permissions:**
+  - If OSCAR import doesn't work, ensure ezShareCPAP is listed in System Preferences > Security & Privacy > Privacy > Accessibility.
+
+#### Windows
+- **Wi-Fi Connection:**
+  - Ensure you're running the application with adequate permissions (Administrator may be required).
+  - If "netsh" commands fail, try running the application as Administrator.
+  
+- **OSCAR Detection:**
+  - If OSCAR isn't detected, ensure it's installed in `C:\Program Files\OSCAR\OSCAR.exe`.
+  - Manually import after file download: File → Import in OSCAR.
+
+#### Linux
+- **NetworkManager Installation:**
+  - If Wi-Fi connection fails, install NetworkManager: `sudo apt install network-manager` (Ubuntu/Debian) or `sudo dnf install NetworkManager` (Fedora).
+  - Ensure NetworkManager is running: `sudo systemctl start NetworkManager`.
+  
+- **OSCAR Path:**
+  - Ensure OSCAR is in your PATH. You can verify with: `which OSCAR`.
+  - If installed in a non-standard location, add the directory to PATH or create a symlink.
 
 ### Wi-Fi Connection Issues
 
@@ -291,6 +356,17 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/issues) with details of the problem.
 
 ## Changelog
+
+### Version 0.2.0 (Cross-Platform)
+- **New:** Full cross-platform support (macOS, Windows, Linux)
+- **New:** Platform-specific Wi-Fi connectivity (networksetup for macOS, netsh for Windows, nmcli for Linux)
+- **New:** Cross-platform configuration file format (JSON instead of macOS plist)
+- **New:** Platform-specific config directories (Preferences on macOS, AppData on Windows, XDG_CONFIG_HOME on Linux)
+- **Improved:** OSCAR import methods for Windows and Linux (launches OSCAR for manual import)
+- **Improved:** OSCAR version detection for all platforms
+- **Improved:** Comprehensive cross-platform documentation and troubleshooting guides
+- **Updated:** Application version display shows detected platform
+- Bumped version from 0.1.0 to 0.2.0 to reflect cross-platform support
 
 ### Version 0.1.0 (OSCAR 2.0.0 Compatible)
 - **New:** Full compatibility with OSCAR 2.0.0 (SQL database backend)

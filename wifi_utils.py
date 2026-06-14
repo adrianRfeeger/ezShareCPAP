@@ -3,6 +3,8 @@ import subprocess
 import logging
 import threading
 import time
+import platform
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -11,14 +13,29 @@ class ConnectionManager:
         self.connection_lock = threading.Lock()
         self.interface = None
         self.connected = False
+        self.system = platform.system()
 
     def find_wifi_interface(self):
-        logger.debug("Finding Wi-Fi interface.")
+        logger.debug(f"Finding Wi-Fi interface on {self.system}.")
+        try:
+            if self.system == 'Darwin':  # macOS
+                return self._find_wifi_interface_macos()
+            elif self.system == 'Windows':
+                return self._find_wifi_interface_windows()
+            else:  # Linux
+                return self._find_wifi_interface_linux()
+        except Exception as e:
+            logger.exception(f"Exception during Wi-Fi interface lookup: {e}")
+            return False
+
+    def _find_wifi_interface_macos(self):
+        """Find Wi-Fi interface on macOS."""
         try:
             result = subprocess.run(
                 ["networksetup", "-listallhardwareports"],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=5
             )
             output = result.stdout
             lines = iter(output.splitlines())
@@ -31,71 +48,245 @@ class ConnectionManager:
             logger.error("Wi-Fi interface not found.")
             return False
         except Exception as e:
-            logger.exception(f"Exception during Wi-Fi interface lookup: {e}")
+            logger.exception(f"Error finding macOS Wi-Fi interface: {e}")
+            return False
+
+    def _find_wifi_interface_windows(self):
+        """Find Wi-Fi interface on Windows."""
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command", "Get-NetAdapter -Physical | Where-Object {$_.InterfaceDescription -match 'Wireless|802.11'} | Select-Object -First 1 -ExpandProperty Name"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                self.interface = result.stdout.strip()
+                logger.info(f"Wi-Fi interface found: {self.interface}")
+                return True
+            logger.error("Wi-Fi interface not found on Windows.")
+            return False
+        except Exception as e:
+            logger.exception(f"Error finding Windows Wi-Fi interface: {e}")
+            return False
+
+    def _find_wifi_interface_linux(self):
+        """Find Wi-Fi interface on Linux."""
+        try:
+            # Try to find wireless interface using iwconfig
+            result = subprocess.run(
+                ["bash", "-c", "iwconfig 2>/dev/null | grep -o '^[^ ]*' | head -1"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                self.interface = result.stdout.strip()
+                logger.info(f"Wi-Fi interface found: {self.interface}")
+                return True
+            
+            # Fallback: try ip command
+            result = subprocess.run(
+                ["bash", "-c", "ip link show | grep -E 'wl[a-z0-9]+' | awk '{print $2}' | tr -d ':' | head -1"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                self.interface = result.stdout.strip()
+                logger.info(f"Wi-Fi interface found: {self.interface}")
+                return True
+            
+            logger.error("Wi-Fi interface not found on Linux.")
+            return False
+        except Exception as e:
+            logger.exception(f"Error finding Linux Wi-Fi interface: {e}")
             return False
 
     def connect(self, ssid, psk):
         with self.connection_lock:
-            logger.debug(f"Starting Wi-Fi connection process: SSID={ssid}")
+            logger.debug(f"Starting Wi-Fi connection process on {self.system}: SSID={ssid}")
             if not self.interface and not self.find_wifi_interface():
                 logger.error("No Wi-Fi interface found. Cannot connect to Wi-Fi.")
                 raise RuntimeError("Failed to find a Wi-Fi interface for connection.")
 
             try:
-                command = [
-                    "networksetup", "-setairportnetwork", self.interface, ssid, psk
-                ]
-                result = subprocess.run(command, capture_output=True, text=True)
-
-                if result.returncode == 0:
-                    logger.info(f"Wi-Fi connected successfully to SSID={ssid} on interface={self.interface}.")
-                    self.connected = True
-                else:
-                    logger.error(f"Wi-Fi connection failed: {result.stderr}")
-                    raise RuntimeError(f"Wi-Fi connection failed: {result.stderr}")
+                if self.system == 'Darwin':  # macOS
+                    self._connect_macos(ssid, psk)
+                elif self.system == 'Windows':
+                    self._connect_windows(ssid, psk)
+                else:  # Linux
+                    self._connect_linux(ssid, psk)
+                
+                logger.info(f"Wi-Fi connected successfully to SSID={ssid} on interface={self.interface}.")
+                self.connected = True
             except Exception as e:
                 logger.exception(f"Exception during Wi-Fi connection: {e}")
-                raise RuntimeError(f"Exception during Wi-Fi connection: {e}")
+                raise RuntimeError(f"Wi-Fi connection failed: {e}")
+
+    def _connect_macos(self, ssid, psk):
+        """Connect to Wi-Fi on macOS."""
+        command = [
+            "networksetup", "-setairportnetwork", self.interface, ssid, psk
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15)
+        if result.returncode != 0:
+            raise RuntimeError(f"macOS Wi-Fi connection failed: {result.stderr}")
+
+    def _connect_windows(self, ssid, psk):
+        """Connect to Wi-Fi on Windows."""
+        # Create a temporary WLAN XML profile
+        profile_xml = f'''<?xml version="1.0"?>
+<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+    <name>{ssid}</name>
+    <SSIDConfig>
+        <SSID>
+            <hex>{ssid.encode().hex()}</hex>
+            <name>{ssid}</name>
+        </SSID>
+    </SSIDConfig>
+    <connectionType>ESS</connectionType>
+    <connectionMode>auto</connectionMode>
+    <autoSwitch>false</autoSwitch>
+    <MSSecuritySetting>
+        <security>
+            <authEncryption>
+                <authentication>WPA2PSK</authentication>
+                <encryption>CCMP</encryption>
+                <useOneX>false</useOneX>
+            </authEncryption>
+        </security>
+        <sharedKey>
+            <keyType>passPhrase</keyType>
+            <protected>false</protected>
+            <keyMaterial>{psk}</keyMaterial>
+        </sharedKey>
+    </MSSecuritySetting>
+</WLANProfile>'''
+        
+        try:
+            # Save profile to temporary file
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+                f.write(profile_xml)
+                profile_path = f.name
+            
+            # Add WLAN profile
+            result = subprocess.run(
+                ["netsh", "wlan", "add", "profile", f"filename={profile_path}", "interface={self.interface}"],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"Failed to add profile: {result.stderr}")
+            
+            # Connect to network
+            result = subprocess.run(
+                ["netsh", "wlan", "connect", f"name={ssid}", f"interface={self.interface}"],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"Failed to connect: {result.stderr}")
+            
+            # Clean up temp file
+            import os
+            os.unlink(profile_path)
+        except Exception as e:
+            raise RuntimeError(f"Windows Wi-Fi connection failed: {e}")
+
+    def _connect_linux(self, ssid, psk):
+        """Connect to Wi-Fi on Linux using nmcli or wpa_cli."""
+        try:
+            # Try nmcli first (NetworkManager)
+            result = subprocess.run(
+                ["nmcli", "dev", "wifi", "connect", ssid, "password", psk],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if result.returncode == 0:
+                return
+            
+            # Fallback message if nmcli fails
+            raise RuntimeError("nmcli connection failed. Ensure NetworkManager is installed and running.")
+        except FileNotFoundError:
+            raise RuntimeError("nmcli not found. Please install NetworkManager (sudo apt install network-manager on Debian/Ubuntu)")
+        except Exception as e:
+            raise RuntimeError(f"Linux Wi-Fi connection failed: {e}")
 
     def disconnect(self, ssid):
         with self.connection_lock:
-            logger.debug(f"Attempting to disconnect from Wi-Fi SSID={ssid} on interface={self.interface}")
+            logger.debug(f"Attempting to disconnect from Wi-Fi SSID={ssid} on {self.system}")
             if not self.interface:
                 logger.error("No Wi-Fi interface provided. Cannot disconnect from Wi-Fi.")
                 return False
 
             try:
-                remove_command = [
-                    "networksetup", "-removepreferredwirelessnetwork", self.interface, ssid
-                ]
-                subprocess.run(remove_command, capture_output=True, text=True)
-
-                disconnect_command = [
-                    "networksetup", "-setairportpower", self.interface, "off"
-                ]
-                subprocess.run(disconnect_command, capture_output=True, text=True)
-
-                turn_on_command = [
-                    "networksetup", "-setairportpower", self.interface, "on"
-                ]
-                subprocess.run(turn_on_command, capture_output=True, text=True)
-
-                logger.info(f"Wi-Fi disconnected and reconnected successfully from SSID={ssid} on interface={self.interface}.")
+                if self.system == 'Darwin':  # macOS
+                    self._disconnect_macos()
+                elif self.system == 'Windows':
+                    self._disconnect_windows(ssid)
+                else:  # Linux
+                    self._disconnect_linux()
+                
+                logger.info(f"Wi-Fi disconnected successfully from SSID={ssid} on interface={self.interface}.")
                 self.connected = False
                 return True
             except Exception as e:
                 logger.exception(f"Exception during Wi-Fi disconnection: {e}")
                 return False
 
+    def _disconnect_macos(self):
+        """Disconnect Wi-Fi on macOS."""
+        disconnect_command = ["networksetup", "-setairportpower", self.interface, "off"]
+        subprocess.run(disconnect_command, capture_output=True, text=True, timeout=10)
+        
+        turn_on_command = ["networksetup", "-setairportpower", self.interface, "on"]
+        subprocess.run(turn_on_command, capture_output=True, text=True, timeout=10)
+
+    def _disconnect_windows(self, ssid):
+        """Disconnect Wi-Fi on Windows."""
+        subprocess.run(
+            ["netsh", "wlan", "disconnect", f"interface={self.interface}"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        subprocess.run(
+            ["netsh", "wlan", "delete", "profile", f"name={ssid}", f"interface={self.interface}"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+    def _disconnect_linux(self):
+        """Disconnect Wi-Fi on Linux."""
+        try:
+            subprocess.run(
+                ["nmcli", "con", "down", "id", self.interface],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        except Exception:
+            logger.warning("Could not disconnect using nmcli")
+
     def verify_connection(self, max_attempts=10):
-        logger.debug(f"Verifying Wi-Fi connection on interface {self.interface} by pinging 192.168.4.1.")
+        logger.debug(f"Verifying Wi-Fi connection on {self.system} by pinging 192.168.4.1.")
         attempt_count = 0
         while attempt_count < max_attempts:
             # Wait briefly before each attempt
             time.sleep(1)
             try:
-                ping_command = ["ping", "-c", "2", "192.168.4.1"]
-                result = subprocess.run(ping_command, capture_output=True, text=True)
+                if self.system == 'Windows':
+                    ping_command = ["ping", "-n", "2", "192.168.4.1"]
+                else:  # macOS and Linux
+                    ping_command = ["ping", "-c", "2", "192.168.4.1"]
+                
+                result = subprocess.run(ping_command, capture_output=True, text=True, timeout=5)
 
                 if result.returncode == 0:
                     logger.info(f"Ping successful on interface {self.interface}. Connection verified.")

@@ -324,6 +324,18 @@ class Callbacks:
 
         logging.info("Importing CPAP data with OSCAR.")
         
+        import platform
+        system = platform.system()
+        
+        if system == 'Darwin':  # macOS
+            self._import_cpap_data_oscar_macos()
+        elif system == 'Windows':
+            self._import_cpap_data_oscar_windows()
+        else:  # Linux
+            self._import_cpap_data_oscar_linux()
+
+    def _import_cpap_data_oscar_macos(self):
+        """Import CPAP data via OSCAR on macOS using AppleScript."""
         # Try OSCAR 2.0.0+ approach first (which is more reliable)
         script_20 = '''
         tell application "OSCAR"
@@ -377,6 +389,47 @@ class Callbacks:
             except subprocess.CalledProcessError as e:
                 logging.error(f"Error importing CPAP data with OSCAR: {e}")
                 update_status(self.app, f"Error importing CPAP data with OSCAR: {e}", 'error')
+
+    def _import_cpap_data_oscar_windows(self):
+        """Import CPAP data via OSCAR on Windows."""
+        try:
+            # Find OSCAR executable
+            import shutil
+            oscar_path = shutil.which('OSCAR') or 'C:\\Program Files\\OSCAR\\OSCAR.exe'
+            
+            if not pathlib.Path(oscar_path).exists():
+                logging.error(f"OSCAR not found at {oscar_path}")
+                update_status(self.app, "OSCAR not found. Please ensure OSCAR is installed.", 'error')
+                return
+            
+            # Activate OSCAR and trigger import through menu
+            # Note: Windows automation is more limited, we'll launch OSCAR and hope the user can manually import
+            subprocess.Popen([oscar_path])
+            logging.info("OSCAR launched on Windows. Please manually use File → Import to import your CPAP data.")
+            update_status(self.app, "OSCAR launched. Please manually import your CPAP card data through File → Import.", 'info')
+        except Exception as e:
+            logging.error(f"Error launching OSCAR on Windows: {e}")
+            update_status(self.app, f"Error launching OSCAR: {e}", 'error')
+
+    def _import_cpap_data_oscar_linux(self):
+        """Import CPAP data via OSCAR on Linux."""
+        try:
+            # Find and launch OSCAR
+            import shutil
+            oscar_path = shutil.which('OSCAR')
+            
+            if not oscar_path:
+                logging.error("OSCAR not found in PATH")
+                update_status(self.app, "OSCAR not found. Please ensure OSCAR is installed.", 'error')
+                return
+            
+            # Launch OSCAR
+            subprocess.Popen([oscar_path])
+            logging.info("OSCAR launched on Linux. Please manually use File → Import to import your CPAP data.")
+            update_status(self.app, "OSCAR launched. Please manually import your CPAP card data through File → Import.", 'info')
+        except Exception as e:
+            logging.error(f"Error launching OSCAR on Linux: {e}")
+            update_status(self.app, f"Error launching OSCAR: {e}", 'error')
 
     def update_ui_checkboxes(self):
         logging.info("Updating checkboxes based on OSCAR installation status.")

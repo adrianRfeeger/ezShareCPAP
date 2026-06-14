@@ -4,6 +4,8 @@ import tkinter as tk
 import queue
 import logging
 import pygubu
+import platform
+import os
 from tkinter import BooleanVar, messagebox
 from ezshare import ezShare
 from config_manager import ConfigManager
@@ -19,7 +21,7 @@ class EzShareCPAPUI:
         initialize_button_states(self)
 
         # Other initializations
-        self.config_file = pathlib.Path.home() / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.plist'
+        self.config_file = self._get_config_file()
         self.config_manager = ConfigManager(self.config_file)
         self.ezshare = ezShare()
         self.worker = None
@@ -72,18 +74,35 @@ class EzShareCPAPUI:
         menubar.add_cascade(label="Help", menu=helpmenu)
         self.main_window.config(menu=menubar)
 
+    def _get_config_file(self):
+        """Get the platform-specific config file path."""
+        system = platform.system()
+        home = pathlib.Path.home()
+        
+        if system == 'Darwin':  # macOS
+            return home / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.json'
+        elif system == 'Windows':
+            app_data = os.getenv('APPDATA', home / 'AppData' / 'Roaming')
+            return pathlib.Path(app_data) / 'ezShareCPAP' / 'config.json'
+        else:  # Linux and others
+            config_home = os.getenv('XDG_CONFIG_HOME', home / '.config')
+            return pathlib.Path(config_home) / 'ezShareCPAP' / 'config.json'
+
     def show_about_dialog(self):
         oscar_version = get_oscar_version()
         oscar_info = f"OSCAR: {oscar_version}" if oscar_version else "OSCAR: Not installed"
+        os_name = platform.system()
         
         about_message = (
             "ezShareCPAP\n"
-            "Version 0.1.0\n"
+            "Version 0.2.0\n"
+            "Cross-Platform (macOS, Windows, Linux)\n"
             "Compatible with OSCAR 1.x and OSCAR 2.0.0+\n"
             "\n"
             "This application downloads CPAP data from an ez Share Wi-Fi SD card "
             "and imports it into OSCAR.\n"
             "\n"
+            f"Platform: {os_name}\n"
             f"{oscar_info}"
         )
         messagebox.showinfo("About ezShareCPAP", about_message)

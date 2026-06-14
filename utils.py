@@ -134,12 +134,34 @@ def check_oscar_installed():
     Returns:
     bool: True if OSCAR is installed, False otherwise.
     """
-    try:
-        oscar_installed = subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True, check=True)
-        return oscar_installed.returncode == 0
-    except subprocess.CalledProcessError as e:
-        print(f"Error checking OSCAR installation: {e}")
-        return False
+    import platform
+    system = platform.system()
+    
+    if system == 'Darwin':  # macOS
+        try:
+            subprocess.run(["osascript", "-e", 'id of application "OSCAR"'], capture_output=True, text=True, check=True, timeout=5)
+            return True
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            return False
+    elif system == 'Windows':
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command", "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Where-Object {$_.DisplayName -match 'OSCAR'} | Select-Object -ExpandProperty DisplayName"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0 and 'OSCAR' in result.stdout
+        except:
+            # Fallback: check Program Files
+            oscar_path = pathlib.Path('C:\\Program Files\\OSCAR\\OSCAR.exe')
+            return oscar_path.exists()
+    else:  # Linux
+        try:
+            subprocess.run(["which", "OSCAR"], capture_output=True, check=True, timeout=5)
+            return True
+        except subprocess.CalledProcessError:
+            return False
 
 def get_oscar_version():
     """
@@ -148,9 +170,21 @@ def get_oscar_version():
     Returns:
     str: Version string (e.g., '2.0.0', '1.7.1', 'unknown') or None if OSCAR is not installed.
     """
+    import platform
+    system = platform.system()
+    
     if not check_oscar_installed():
         return None
     
+    if system == 'Darwin':  # macOS
+        return _get_oscar_version_macos()
+    elif system == 'Windows':
+        return _get_oscar_version_windows()
+    else:  # Linux
+        return _get_oscar_version_linux()
+
+def _get_oscar_version_macos():
+    """Get OSCAR version on macOS."""
     try:
         # Try to get version from OSCAR's info plist
         result = subprocess.run(
@@ -191,7 +225,72 @@ def get_oscar_version():
         logging.warning("OSCAR version detection timed out")
         return "unknown"
     except Exception as e:
-        logging.error(f"Error detecting OSCAR version: {e}")
+        logging.error(f"Error detecting OSCAR version on macOS: {e}")
+        return "unknown"
+
+def _get_oscar_version_windows():
+    """Get OSCAR version on Windows."""
+    try:
+        # Try registry first
+        result = subprocess.run(
+            ["powershell", "-Command", "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Where-Object {$_.DisplayName -match 'OSCAR'} | Select-Object -ExpandProperty DisplayVersion"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            version = result.stdout.strip()
+            logging.info(f"Detected OSCAR version: {version}")
+            return version
+        
+        # Fallback: try to get version from exe
+        oscar_path = pathlib.Path('C:\\Program Files\\OSCAR\\OSCAR.exe')
+        if oscar_path.exists():
+            result = subprocess.run(
+                ["powershell", "-Command", f'(Get-Item "{oscar_path}").VersionInfo.ProductVersion'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                version = result.stdout.strip()
+                logging.info(f"Detected OSCAR version: {version}")
+                return version
+        
+        logging.warning("Could not determine OSCAR version on Windows")
+        return "unknown"
+    
+    except subprocess.TimeoutExpired:
+        logging.warning("OSCAR version detection timed out")
+        return "unknown"
+    except Exception as e:
+        logging.error(f"Error detecting OSCAR version on Windows: {e}")
+        return "unknown"
+
+def _get_oscar_version_linux():
+    """Get OSCAR version on Linux."""
+    try:
+        result = subprocess.run(
+            ["OSCAR", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            version = result.stdout.strip()
+            logging.info(f"Detected OSCAR version: {version}")
+            return version
+        
+        logging.warning("Could not determine OSCAR version on Linux")
+        return "unknown"
+    
+    except subprocess.TimeoutExpired:
+        logging.warning("OSCAR version detection timed out")
+        return "unknown"
+    except Exception as e:
+        logging.error(f"Error detecting OSCAR version on Linux: {e}")
         return "unknown"
 
 def resource_path(relative_path):

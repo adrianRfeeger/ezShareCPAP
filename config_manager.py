@@ -1,24 +1,38 @@
-import plistlib
+import json
+import pathlib
+import platform
 
 class ConfigManager:
-    def __init__(self, plist_file):
-        self.plist_file = plist_file
+    def __init__(self, config_file):
+        self.config_file = pathlib.Path(config_file).expanduser()
         self.config = {}
         self.load_config()
 
     def load_config(self):
-        if self.plist_file.exists():
-            with self.plist_file.open('rb') as f:
-                self.config = plistlib.load(f)
-            # Ensure all default settings are included
-            self.merge_default_config()
+        if self.config_file.exists():
+            try:
+                with self.config_file.open('r', encoding='utf-8') as f:
+                    self.config = json.load(f)
+                # Ensure all default settings are included
+                self.merge_default_config()
+            except (json.JSONDecodeError, IOError) as e:
+                import logging
+                logging.error(f"Error loading config file: {e}. Loading defaults.")
+                self.config = self.get_default_config()
+                self.save_config()
         else:
             self.config = self.get_default_config()
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
             self.save_config()
 
     def save_config(self):
-        with self.plist_file.open('wb') as f:
-            plistlib.dump(self.config, f)
+        try:
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            with self.config_file.open('w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=4)
+        except IOError as e:
+            import logging
+            logging.error(f"Error saving config file: {e}")
 
     def restore_defaults(self):
         self.config = self.get_default_config()
