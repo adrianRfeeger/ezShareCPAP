@@ -1,6 +1,22 @@
 import json
 import pathlib
 import platform
+import os
+
+
+def get_default_config_file():
+    """Get the platform-specific config file path."""
+    system = platform.system()
+    home = pathlib.Path.home()
+
+    if system == 'Darwin':  # macOS
+        return home / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.json'
+    elif system == 'Windows':
+        app_data = os.getenv('APPDATA', home / 'AppData' / 'Roaming')
+        return pathlib.Path(app_data) / 'ezShareCPAP' / 'config.json'
+    else:  # Linux and others
+        config_home = os.getenv('XDG_CONFIG_HOME', home / '.config')
+        return pathlib.Path(config_home) / 'ezShareCPAP' / 'config.json'
 
 class ConfigManager:
     def __init__(self, config_file):

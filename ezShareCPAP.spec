@@ -43,7 +43,7 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=['cli'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -53,15 +53,30 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
+gui_exe = EXE(
     pyz,
     a.scripts,
     [],
     **exe_options
 )
 
+collect_entries = [gui_exe]
+
+if not IS_MACOS:
+    cli_exe_options = exe_options.copy()
+    cli_exe_options['name'] = f'{APP_NAME}-cli'
+    cli_exe_options['console'] = True
+    collect_entries.append(
+        EXE(
+            pyz,
+            a.scripts,
+            [],
+            **cli_exe_options
+        )
+    )
+
 coll = COLLECT(
-    exe,
+    *collect_entries,
     a.binaries,
     a.datas,
     strip=not IS_WINDOWS,

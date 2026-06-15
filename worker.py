@@ -12,15 +12,16 @@ class EzShareWorker(threading.Thread):
 
     def run(self):
         logging.info(f"{self.name} started.")
+        success = False
         try:
             self.ezshare.set_progress_callback(self.update_progress)
             self.ezshare.set_status_callback(self.update_status)
-            self.ezshare.run()
+            success = bool(self.ezshare.run())
         except Exception as e:
             logging.error(f"{self.name} encountered an error: {str(e)}")
             self.update_status(f'Error: {e}', 'error')
         finally:
-            self._cleanup()
+            self._cleanup(success)
 
     def update_progress(self, value):
         logging.debug(f"{self.name} updating progress: {value}")
@@ -42,11 +43,10 @@ class EzShareWorker(threading.Thread):
         self.ezshare.stop()
         self.queue.put(('stop',))
 
-    def _cleanup(self):
+    def _cleanup(self, success=False):
         logging.info(f"Cleaning up {self.name}.")
         if self.ezshare.connected:
             self.ezshare.connection_manager.disconnect(self.ezshare.ssid)
             self.ezshare.connected = False
-        success = (self.ezshare.processed_files == self.ezshare.total_files)
         self.queue.put(('finished', success))
         logging.info(f"{self.name} cleanup completed.")

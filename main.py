@@ -1,14 +1,42 @@
 # main.py
-import pathlib
+import sys
+
+
+ENTRYPOINT_HELP = (
+    "Usage:\n"
+    "  python main.py                 Launch the GUI\n"
+    "  python main.py gui             Launch the GUI\n"
+    "  python main.py sync [options]  Run from the command line\n"
+    "  python main.py --cli [options] Run from the command line\n\n"
+    "Use `python main.py sync --help` for CLI sync options."
+)
+
+
+def _direct_cli_exit(argv):
+    if argv and argv[0] == 'sync':
+        from cli import run_cli
+        raise SystemExit(run_cli(argv[1:]))
+
+    if argv and argv[0] == '--cli':
+        from cli import run_cli
+        raise SystemExit(run_cli(argv[1:]))
+
+    if argv and argv[0] in ('-h', '--help'):
+        print(ENTRYPOINT_HELP)
+        raise SystemExit(0)
+
+
+if __name__ == "__main__":
+    _direct_cli_exit(sys.argv[1:])
+
 import tkinter as tk
 import queue
 import logging
 import pygubu
 import platform
-import os
 from tkinter import BooleanVar, messagebox
 from ezshare import ezShare
-from config_manager import ConfigManager
+from config_manager import ConfigManager, get_default_config_file
 from callbacks import Callbacks
 from ez_share_config import EzShareConfig
 from status_manager import update_status
@@ -75,18 +103,7 @@ class EzShareCPAPUI:
         self.main_window.config(menu=menubar)
 
     def _get_config_file(self):
-        """Get the platform-specific config file path."""
-        system = platform.system()
-        home = pathlib.Path.home()
-        
-        if system == 'Darwin':  # macOS
-            return home / 'Library' / 'Preferences' / 'com.ezShareCPAP.config.json'
-        elif system == 'Windows':
-            app_data = os.getenv('APPDATA', home / 'AppData' / 'Roaming')
-            return pathlib.Path(app_data) / 'ezShareCPAP' / 'config.json'
-        else:  # Linux and others
-            config_home = os.getenv('XDG_CONFIG_HOME', home / '.config')
-            return pathlib.Path(config_home) / 'ezShareCPAP' / 'config.json'
+        return get_default_config_file()
 
     def show_about_dialog(self):
         oscar_version = get_oscar_version()
@@ -237,6 +254,37 @@ class EzShareCPAPUI:
         logging.info("Starting main application loop")
         self.main_window.mainloop()
 
-if __name__ == "__main__":
+def run_gui():
     app = EzShareCPAPUI()
     app.run()
+    return 0
+
+
+def print_entrypoint_help():
+    print(ENTRYPOINT_HELP)
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+
+    if not argv or argv[0] == 'gui':
+        return run_gui()
+
+    if argv[0] == 'sync':
+        from cli import run_cli
+        return run_cli(argv[1:])
+
+    if argv[0] == '--cli':
+        from cli import run_cli
+        return run_cli(argv[1:])
+
+    if argv[0] in ('-h', '--help'):
+        print_entrypoint_help()
+        return 0
+
+    print_entrypoint_help()
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

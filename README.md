@@ -128,6 +128,12 @@ The app attempts to detect your installed OSCAR version and displays it in the *
    python main.py
    ```
 
+   To run a sync without opening the GUI:
+
+   ```bash
+   python main.py sync --path ~/Documents/CPAP_Data/SD_card --ssid "ez Share" --psk 88888888
+   ```
+
 ## Building Standalone Executable
 
 ### Using PyInstaller
@@ -160,16 +166,72 @@ PyInstaller does not cross-compile this application. Run the build on each targe
 
 4. **Find Your Build Output:**
    - **macOS:** `dist/ezShareCPAP.app` (move to `/Applications`)
-   - **Windows:** `dist/ezShareCPAP/ezShareCPAP.exe`
-   - **Linux:** `dist/ezShareCPAP/ezShareCPAP`
+   - **Windows:** `dist/ezShareCPAP/ezShareCPAP.exe` for the GUI and `dist/ezShareCPAP/ezShareCPAP-cli.exe` for the CLI
+   - **Linux:** `dist/ezShareCPAP/ezShareCPAP` for the GUI and `dist/ezShareCPAP/ezShareCPAP-cli` for the CLI
 
 The spec uses `icon.icns` for macOS and `icon.ico` for Windows when those files are present.
+The entry point supports both GUI and CLI mode. Non-macOS PyInstaller builds include a dedicated console CLI launcher so command output and exit codes work cleanly from a terminal.
 
 ## Usage
 
 ### Graphical User Interface (GUI)
 
 The GUI provides an intuitive way to configure and run the file synchronization process.
+
+Launch the GUI with:
+
+```bash
+python main.py
+```
+
+or:
+
+```bash
+python main.py gui
+```
+
+### Command Line Interface (CLI)
+
+Use the CLI when you want to run ezShareCPAP from a terminal, scheduled task, shell script, or packaged executable without opening the GUI.
+
+```bash
+python main.py sync --path ~/Documents/CPAP_Data/SD_card --ssid "ez Share" --psk 88888888
+```
+
+`--cli` is also accepted as an alias:
+
+```bash
+python main.py --cli --path ~/Documents/CPAP_Data/SD_card
+```
+
+The CLI reads the same saved configuration as the GUI. Any command-line option overrides the saved value for that run.
+
+Common options:
+
+- `--path`: Local directory where downloaded files are saved.
+- `--url`: ez Share directory URL. Default: `http://192.168.4.1/dir?dir=A:`
+- `--ssid`: ez Share Wi-Fi SSID. Default: `ez Share`
+- `--psk`: ez Share Wi-Fi password. Default: `88888888`
+- `--overwrite`: Download files even when a local copy already exists.
+- `--ignore`: Ignore file or directory names. Repeat the flag or use comma-separated values.
+- `--retries`: Wi-Fi/download retry count.
+- `--connection-delay`: Seconds to wait between retry attempts.
+- `--save-config`: Save the provided path, URL, SSID, and PSK to the shared config before syncing.
+- `--open-oscar`: Open OSCAR after a successful sync. macOS attempts import automation; Windows and Linux launch OSCAR for manual import.
+- `--quiet`: Only print errors.
+- `--debug`: Enable debug logging.
+
+For packaged builds, pass the same arguments to the executable:
+
+```bash
+ezShareCPAP-cli sync --path ~/Documents/CPAP_Data/SD_card
+```
+
+For macOS app bundles, run the bundled executable from a terminal:
+
+```bash
+dist/ezShareCPAP.app/Contents/MacOS/ezShareCPAP sync --path ~/Documents/CPAP_Data/SD_card
+```
 
 **Fields:**
 

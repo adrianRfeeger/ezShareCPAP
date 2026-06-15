@@ -104,26 +104,27 @@ class ezShare:
                     if retries == 0 or not self._is_running:
                         # If no retries left or the process was canceled, stop here.
                         self.connected = False
-                        return
+                        return False
                     else:
                         time.sleep(self.connection_delay)  # Wait before retrying
 
             # If after all attempts not connected, just return
             if not self.connected:
-                return
+                return False
 
             # Successfully connected and verified - proceed
-            self.run_after_connection_delay()
+            success = self.run_after_connection_delay()
 
             # Disconnect after finishing
             if self.connected:
                 self.connection_manager.disconnect(self.ssid)
                 self.update_status('Disconnected from Wi-Fi.')
                 self.connected = False
+            return success
 
         else:
             self.update_status('No SSID provided, cannot connect to Wi-Fi.', 'error')
-            return
+            return False
 
     def calculate_total_files(self, url, dir_path, overwrite):
         total_files = 0
@@ -141,11 +142,11 @@ class ezShare:
     def run_after_connection_delay(self):
         if not self.connected or not self._is_running:
             self.update_status('Not connected. Aborting file scanning.', 'error')
-            return
+            return False
 
         if self.path is None:
             self.update_status('Error: Path is not set.', 'error')
-            return
+            return False
 
         self.path.mkdir(parents=True, exist_ok=True)
         self.update_status(f'Using path: {self.path}')
@@ -156,7 +157,7 @@ class ezShare:
         if test_files is None and test_dirs is None:
             # If an error occurred, treat this as a connection problem
             self.update_status('Unable to retrieve directory listing. Connection issue suspected.', 'error')
-            return
+            return False
         elif not test_files and not test_dirs:
             # If we got an empty listing (and no error), it may mean no files or a connection glitch.
             # Log a warning and proceed cautiously - but this at least differentiates a verified empty result.
@@ -169,15 +170,17 @@ class ezShare:
             self.update_status('All files are up to date. No files to sync. Process completed.')
             if self.progress_callback:
                 self.progress_callback('no_files')
-            return
+            return True
 
         self.processed_files = recursive_traversal(
             self, self.url, self.path, self.total_files, self.processed_files, lambda: self._is_running
         )
         if self.processed_files == self.total_files:
             self.update_status('File transfer completed successfully.')
+            return True
         else:
             self.update_status('File transfer incomplete.', 'error')
+            return False
 
     def stop(self):
         self._is_running = False
