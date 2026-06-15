@@ -17,7 +17,7 @@ class FolderSelectorDialog:
         self.master = master
         self.main_window = main_window  # This should be the main application instance
         self.builder = pygubu.Builder()
-        self.builder.add_from_file(resource_path('ezsharecpap.ui'))  # Load the UI definition from the XML file
+        self.builder.add_from_file(resource_path('ezShareCPAP.ui'))  # Load the UI definition from the XML file
         self.dialog = self.builder.get_object('folder_selector_window', self.master)
 
         # Initialize the status timer to None
