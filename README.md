@@ -3,40 +3,33 @@
 
 ## Overview
 
-ezShareCPAP is a cross-platform application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualisation.
+ezShareCPAP is a cross-platform application designed to download files from an [ez Share SD card/adapter](https://www.youtube.com/watch?v=ANz8pNDHAPo) when used in CPAP devices (such as the ResMed AirSense 10 Elite) to a local directory. These files can then be imported into applications such as [OSCAR](https://www.sleepfiles.com/OSCAR/) for data analysis and visualisation. On macOS, ezShareCPAP can attempt to automate OSCAR's import flow; on Windows and Linux, it launches OSCAR so you can import the downloaded data manually.
 
 ### Supported Platforms
 - **macOS** (Intel and Apple Silicon)
 - **Windows** (10 and later)
 - **Linux** (Ubuntu, Debian, Fedora, and other distributions)
 
+PyInstaller builds are native to the operating system used to build them. Build Windows releases on Windows, Linux releases on Linux, and macOS releases on macOS.
+
 ## OSCAR Compatibility
 
-This application is compatible with:
+This application downloads CPAP files in a structure that can be imported into:
 - **OSCAR 1.x** (legacy versions 1.7.0 and earlier)
 - **OSCAR 2.0.0+** (current release with SQL database backend)
 
-### Version-Specific Details
+### Open OSCAR Behavior
 
-#### OSCAR 2.0.0+ (Recommended)
-- **Status:** Fully supported ✅
-- **Features:** SQL database backend, improved data analysis, CSV export
-- **Import Method:** File → Import → CPAP Card (new menu structure)
-- **Auto-Detection:** ezShareCPAP automatically detects and uses the OSCAR 2.0.0+ import method
-- **Release Date:** June 5, 2026
+- **macOS:** Attempts to activate OSCAR and trigger the CPAP card import flow with AppleScript/System Events. It tries the OSCAR 2.x menu flow first and falls back to the OSCAR 1.x menu item.
+- **Windows:** Launches OSCAR if it is installed, then prompts you to import manually from OSCAR.
+- **Linux:** Launches OSCAR from `PATH`, then prompts you to import manually from OSCAR.
 
-#### OSCAR 1.x (Legacy)
-- **Status:** Fully supported for backward compatibility ✅
-- **Versions:** 1.7.0 and earlier
-- **Import Method:** File → Import CPAP Card Data (legacy menu structure)
-- **Auto-Detection:** Automatic fallback if OSCAR 2.0.0+ method fails
-
-### Auto-Detection
-The app automatically detects your installed OSCAR version and uses the appropriate import method. You can view the detected version in the **Help → About** dialog within the application.
+### Version Detection
+The app attempts to detect your installed OSCAR version and displays it in the **Help > About** dialog. Version detection is informational on Windows and Linux because import automation is macOS-only.
 
 ### Troubleshooting OSCAR Integration
-- If import fails, ensure OSCAR is running and in focus
-- Grant accessibility permissions to ezShareCPAP (see Permissions section)
+- On macOS, if automatic import fails, ensure OSCAR is running and in focus.
+- On macOS, grant Accessibility and Automation permissions to ezShareCPAP (see Permissions section).
 - Check that OSCAR is installed in the default location:
   - **macOS:** `/Applications/OSCAR.app`
   - **Windows:** `C:\Program Files\OSCAR\OSCAR.exe`
@@ -50,7 +43,7 @@ The app automatically detects your installed OSCAR version and uses the appropri
 - **User Interface:** Provides a graphical user interface (GUI) for ease of use.
 - **Configuration:** Handles configuration settings directly through the GUI.
 - **Real-time Updates:** Displays status updates during the file synchronization process.
-- **Open OSCAR:** Option to automatically import data with OSCAR after completion.
+- **Open OSCAR:** Option to open OSCAR after completion. macOS can attempt automatic import; Windows and Linux require manual import from OSCAR.
 - **Quit:** Option to automatically quit the application after completion.
 - **ez Share Configuration:** Allows configuring the ez Share SD card settings via the application.
 - **Folder Selection:** Browse and select folders on the ez Share SD card to specify which files to sync.
@@ -62,8 +55,8 @@ The app automatically detects your installed OSCAR version and uses the appropri
 - **Required Python Packages:** Listed in `requirements.txt` (for source installation).
 - **Platform-Specific Tools:**
   - **macOS:** AppleScript (built-in)
-  - **Windows:** PowerShell 5.0+ (built-in on Windows 10+)
-  - **Linux:** NetworkManager (for Wi-Fi connectivity)
+  - **Windows:** PowerShell 5.0+ and `netsh` (built into Windows 10+)
+  - **Linux:** NetworkManager/`nmcli` (for Wi-Fi connectivity)
 
 ## Installation
 
@@ -71,10 +64,10 @@ The app automatically detects your installed OSCAR version and uses the appropri
 
 #### macOS
 1. **Download the Release Version:**
-   - Download the latest macOS release (Universal Binary for Intel & Apple Silicon) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+   - Download the latest macOS release for your processor (`arm64` for Apple Silicon, `x86_64` for Intel) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
 2. **Extract and Move to Applications:**
    - Unzip the downloaded file.
-   - Drag the `ezShareCPAP` application into your `Applications` folder.
+   - Drag `ezShareCPAP.app` into your `Applications` folder.
 3. **First Run Security:**
    - Double-click `ezShareCPAP` to launch it.
    - If blocked, go to **System Preferences** > **Security & Privacy** > **General** and click **Open Anyway**.
@@ -84,20 +77,18 @@ The app automatically detects your installed OSCAR version and uses the appropri
 
 #### Windows
 1. **Download the Release Version:**
-   - Download the latest Windows release (.exe or .zip) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
-2. **Install or Extract:**
-   - If installer (`.exe`): Double-click and follow the installation wizard.
-   - If portable (`.zip`): Extract to your desired location.
+   - Download the latest Windows release archive from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+2. **Extract:**
+   - Extract the archive to your desired location.
 3. **First Run:**
    - Double-click `ezShareCPAP.exe` to launch.
    - Windows may show a security warning; click **More info** → **Run anyway** to proceed.
 
 #### Linux
 1. **Download the Release Version:**
-   - Download the latest Linux release (.AppImage or .tar.gz) from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
+   - Download the latest Linux release archive from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
 2. **Extract and Make Executable:**
-   - If AppImage: `chmod +x ezShareCPAP*.AppImage && ./ezShareCPAP*.AppImage`
-   - If tar.gz: `tar -xzf ezShareCPAP*.tar.gz && cd ezShareCPAP && ./ezShareCPAP`
+   - `tar -xzf ezShareCPAP*.tar.gz && cd ezShareCPAP && chmod +x ezShareCPAP && ./ezShareCPAP`
 3. **Install NetworkManager (if needed):**
    - **Ubuntu/Debian:** `sudo apt install network-manager`
    - **Fedora:** `sudo dnf install NetworkManager`
@@ -137,9 +128,11 @@ The app automatically detects your installed OSCAR version and uses the appropri
    python main.py
    ```
 
-## Building Standalone Executable (All Platforms)
+## Building Standalone Executable
 
 ### Using PyInstaller
+
+PyInstaller does not cross-compile this application. Run the build on each target operating system.
 
 1. **Activate the Virtual Environment:**
 
@@ -165,10 +158,12 @@ The app automatically detects your installed OSCAR version and uses the appropri
    pyinstaller ezShareCPAP.spec
    ```
 
-4. **Find Your Executable:**
+4. **Find Your Build Output:**
    - **macOS:** `dist/ezShareCPAP.app` (move to `/Applications`)
-   - **Windows:** `dist/ezShareCPAP.exe` (add to Start Menu or Desktop)
-   - **Linux:** `dist/ezShareCPAP` (move to `/usr/local/bin` or similar)
+   - **Windows:** `dist/ezShareCPAP/ezShareCPAP.exe`
+   - **Linux:** `dist/ezShareCPAP/ezShareCPAP`
+
+The spec uses `icon.icns` for macOS and `icon.ico` for Windows when those files are present.
 
 ## Usage
 
@@ -193,8 +188,8 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 
 **Checkboxes:**
 
-- **Import With OSCAR:**
-  - Automatically imports data into OSCAR after the synchronization process is completed.
+- **Open OSCAR:**
+  - Opens OSCAR after synchronization. On macOS, ezShareCPAP attempts to start the import flow automatically. On Windows and Linux, open OSCAR and import manually.
 - **Quit After Completion:**
   - Automatically quits the application after the synchronization process is completed.
 
@@ -244,7 +239,9 @@ The GUI provides an intuitive way to configure and run the file synchronization 
    - Observe the **Progress Bar** and **Status Bar** for updates.
 
 5. **Import Data with OSCAR (Optional):**
-   - If **Open OSCAR** is checked, the application will attempt to import the data into OSCAR after synchronization.
+   - If **Open OSCAR** is checked, the application will open OSCAR after synchronization.
+   - On macOS, it attempts to start OSCAR's CPAP card import flow automatically.
+   - On Windows and Linux, manually import the downloaded folder from OSCAR.
 
 6. **Completion:**
    - The application will display a completion message.
@@ -255,6 +252,7 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 - `README.md`: This file, containing documentation for the project.
 - `ezShareCPAP.spec`: PyInstaller specification file for building the standalone application.
 - `icon.icns`: Icon file for the macOS application.
+- `icon.ico`: Icon file for the Windows application.
 - `requirements.txt`: Lists required Python packages for the project.
 - `main.py`: Entry point for the program.
 - `callbacks.py`: Handles callback functions for UI events.
@@ -267,9 +265,10 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 - `utils.py`: Utility functions for resource paths and permission checks.
 - `wifi_utils.py`: Handles Wi-Fi connections for macOS, Windows, and Linux.
 - `worker.py`: Background worker thread for performing the synchronization process.
-- `ezsharecpap.ui`: PyGubu UI definition file for the GUI.
+- `ezShareCPAP.ui`: PyGubu UI definition file for the GUI.
 - `icon.png`: Icon image used in the application.
 - `folder.png`, `file.png`, `sdcard.png`: Icons used in the folder selector dialog.
+- `tests/test_platform_wifi.py`: Unit tests for platform-specific Wi-Fi command generation and config-page launching.
 
 ## Troubleshooting
 
@@ -286,7 +285,8 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 #### Windows
 - **Wi-Fi Connection:**
   - Ensure you're running the application with adequate permissions (Administrator may be required).
-  - If "netsh" commands fail, try running the application as Administrator.
+  - If `netsh` commands fail, try running the application as Administrator.
+  - The app uses PowerShell to locate the Wi-Fi adapter and falls back to `netsh wlan show interfaces`.
   
 - **OSCAR Detection:**
   - If OSCAR isn't detected, ensure it's installed in `C:\Program Files\OSCAR\OSCAR.exe`.
@@ -296,6 +296,7 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 - **NetworkManager Installation:**
   - If Wi-Fi connection fails, install NetworkManager: `sudo apt install network-manager` (Ubuntu/Debian) or `sudo dnf install NetworkManager` (Fedora).
   - Ensure NetworkManager is running: `sudo systemctl start NetworkManager`.
+  - The app uses `nmcli` to connect and disconnect. It can detect interfaces with `nmcli`, `iwconfig`, or `ip`, but NetworkManager is still required for connection.
   
 - **OSCAR Path:**
   - Ensure OSCAR is in your PATH. You can verify with: `which OSCAR`.
@@ -329,8 +330,11 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 
 - **OSCAR Installation:**
   - Download and install OSCAR from the [official website](https://www.sleepfiles.com/OSCAR/).
+- **Import Behavior:**
+  - macOS can attempt automatic import through OSCAR's menu.
+  - Windows and Linux launch OSCAR only; use OSCAR's import menu manually.
 
-- **Application Permissions:**
+- **macOS Application Permissions:**
   - **Grant Accessibility Permissions:**
     1. Open **System Preferences** > **Security & Privacy** > **Privacy** tab.
     2. Select **Accessibility** from the left pane.
@@ -353,7 +357,7 @@ The GUI provides an intuitive way to configure and run the file synchronization 
 
 ## Support
 
-If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP---tkinter-version/issues) with details of the problem.
+If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP/issues) with details of the problem.
 
 ## Changelog
 
@@ -362,17 +366,19 @@ If you encounter issues not covered in this guide, please open an issue on the [
 - **New:** Platform-specific Wi-Fi connectivity (networksetup for macOS, netsh for Windows, nmcli for Linux)
 - **New:** Cross-platform configuration file format (JSON instead of macOS plist)
 - **New:** Platform-specific config directories (Preferences on macOS, AppData on Windows, XDG_CONFIG_HOME on Linux)
-- **Improved:** OSCAR import methods for Windows and Linux (launches OSCAR for manual import)
+- **Improved:** OSCAR handling on Windows and Linux launches OSCAR for manual import
 - **Improved:** OSCAR version detection for all platforms
 - **Improved:** Comprehensive cross-platform documentation and troubleshooting guides
 - **Updated:** Application version display shows detected platform
+- **Updated:** PyInstaller spec supports macOS, Windows, and Linux native builds with platform-specific icons
+- **Updated:** ez Share configuration page opens through the default browser on all platforms
 - Bumped version from 0.1.0 to 0.2.0 to reflect cross-platform support
 
 ### Version 0.1.0 (OSCAR 2.0.0 Compatible)
-- **New:** Full compatibility with OSCAR 2.0.0 (SQL database backend)
+- **New:** Compatibility with OSCAR 2.0.0 import menu changes on macOS
 - **New:** Automatic OSCAR version detection
 - **New:** Display detected OSCAR version in About dialog
-- **Improved:** Dual import method support for OSCAR 1.x and OSCAR 2.0.0+
+- **Improved:** Dual macOS import method support for OSCAR 1.x and OSCAR 2.0.0+
 - **Improved:** Better error handling and fallback mechanisms for OSCAR import
 - **Fixed:** AppleScript compatibility with OSCAR's updated menu structure
 - Bumped version from 0.0.9 to 0.1.0 to reflect OSCAR 2.0.0 support
