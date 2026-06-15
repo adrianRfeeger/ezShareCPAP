@@ -2,7 +2,7 @@
 import threading
 import tkinter as tk
 import requests
-import subprocess
+import webbrowser
 from tkinter import messagebox
 from wifi_utils import ConnectionManager
 from utils import set_default_button_states, set_process_button_states, update_button_state
@@ -103,11 +103,8 @@ class EzShareConfig:
                     'HTTP server is reachable. Opening the configuration page...',
                     'info',
                 )
-                subprocess.run(
-                    [
-                        'open',
-                        'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356',
-                    ]
+                webbrowser.open(
+                    'http://192.168.4.1/publicdir/index.htm?vtype=0&fdir=&ftype=1&devw=320&devh=356'
                 )
                 logging.info("Configuration page opened.")
             else:

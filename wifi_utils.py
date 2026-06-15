@@ -1,10 +1,12 @@
 # wifi_utils.py
+import os
 import subprocess
 import logging
 import threading
 import time
 import platform
-import sys
+import tempfile
+from xml.sax.saxutils import escape
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,17 @@ class ConnectionManager:
         """Find Wi-Fi interface on Windows."""
         try:
             result = subprocess.run(
-                ["powershell", "-Command", "Get-NetAdapter -Physical | Where-Object {$_.InterfaceDescription -match 'Wireless|802.11'} | Select-Object -First 1 -ExpandProperty Name"],
+                [
+                    "powershell",
+                    "-Command",
+                    "Get-NetAdapter -Physical | "
+                    "Where-Object {"
+                    "$_.Status -ne 'Disabled' -and "
+                    "($_.NdisPhysicalMedium -eq 'Native 802.11' -or "
+                    "$_.InterfaceDescription -match 'Wireless|Wi-Fi|WiFi|802.11' -or "
+                    "$_.Name -match 'Wireless|Wi-Fi|WiFi')"
+                    "} | Select-Object -First 1 -ExpandProperty Name",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -64,6 +76,20 @@ class ConnectionManager:
                 self.interface = result.stdout.strip()
                 logger.info(f"Wi-Fi interface found: {self.interface}")
                 return True
+
+            result = subprocess.run(
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    if line.strip().lower().startswith("name"):
+                        self.interface = line.split(":", 1)[1].strip()
+                        logger.info(f"Wi-Fi interface found: {self.interface}")
+                        return True
+
             logger.error("Wi-Fi interface not found on Windows.")
             return False
         except Exception as e:
@@ -73,9 +99,27 @@ class ConnectionManager:
     def _find_wifi_interface_linux(self):
         """Find Wi-Fi interface on Linux."""
         try:
-            # Try to find wireless interface using iwconfig
+            # Prefer NetworkManager because the connect path uses nmcli.
+            try:
+                result = subprocess.run(
+                    ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.splitlines():
+                        parts = line.split(":")
+                        if len(parts) >= 2 and parts[1] == "wifi":
+                            self.interface = parts[0]
+                            logger.info(f"Wi-Fi interface found: {self.interface}")
+                            return True
+            except FileNotFoundError:
+                logger.debug("nmcli not found while looking up Linux Wi-Fi interface.")
+
+            # Try to find wireless interface using iwconfig.
             result = subprocess.run(
-                ["bash", "-c", "iwconfig 2>/dev/null | grep -o '^[^ ]*' | head -1"],
+                ["bash", "-c", "iwconfig 2>/dev/null | awk '/IEEE 802.11/ {print $1; exit}'"],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -135,45 +179,55 @@ class ConnectionManager:
 
     def _connect_windows(self, ssid, psk):
         """Connect to Wi-Fi on Windows."""
-        # Create a temporary WLAN XML profile
+        escaped_ssid = escape(ssid)
+        escaped_psk = escape(psk)
+        ssid_hex = ssid.encode("utf-8").hex().upper()
+        if psk:
+            security_xml = f"""            <authEncryption>
+                <authentication>WPA2PSK</authentication>
+                <encryption>AES</encryption>
+                <useOneX>false</useOneX>
+            </authEncryption>
+            <sharedKey>
+                <keyType>passPhrase</keyType>
+                <protected>false</protected>
+                <keyMaterial>{escaped_psk}</keyMaterial>
+            </sharedKey>"""
+        else:
+            security_xml = """            <authEncryption>
+                <authentication>open</authentication>
+                <encryption>none</encryption>
+                <useOneX>false</useOneX>
+            </authEncryption>"""
+
+        # Create a temporary WLAN XML profile compatible with netsh.
         profile_xml = f'''<?xml version="1.0"?>
 <WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
-    <name>{ssid}</name>
+    <name>{escaped_ssid}</name>
     <SSIDConfig>
         <SSID>
-            <hex>{ssid.encode().hex()}</hex>
-            <name>{ssid}</name>
+            <hex>{ssid_hex}</hex>
+            <name>{escaped_ssid}</name>
         </SSID>
     </SSIDConfig>
     <connectionType>ESS</connectionType>
     <connectionMode>auto</connectionMode>
-    <autoSwitch>false</autoSwitch>
-    <MSSecuritySetting>
+    <MSM>
         <security>
-            <authEncryption>
-                <authentication>WPA2PSK</authentication>
-                <encryption>CCMP</encryption>
-                <useOneX>false</useOneX>
-            </authEncryption>
+{security_xml}
         </security>
-        <sharedKey>
-            <keyType>passPhrase</keyType>
-            <protected>false</protected>
-            <keyMaterial>{psk}</keyMaterial>
-        </sharedKey>
-    </MSSecuritySetting>
+    </MSM>
 </WLANProfile>'''
         
+        profile_path = None
         try:
-            # Save profile to temporary file
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False, encoding='utf-8') as f:
                 f.write(profile_xml)
                 profile_path = f.name
             
             # Add WLAN profile
             result = subprocess.run(
-                ["netsh", "wlan", "add", "profile", f"filename={profile_path}", "interface={self.interface}"],
+                ["netsh", "wlan", "add", "profile", f"filename={profile_path}", f"interface={self.interface}"],
                 capture_output=True,
                 text=True,
                 timeout=15
@@ -183,26 +237,33 @@ class ConnectionManager:
             
             # Connect to network
             result = subprocess.run(
-                ["netsh", "wlan", "connect", f"name={ssid}", f"interface={self.interface}"],
+                ["netsh", "wlan", "connect", f"name={ssid}", f"ssid={ssid}", f"interface={self.interface}"],
                 capture_output=True,
                 text=True,
                 timeout=15
             )
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to connect: {result.stderr}")
-            
-            # Clean up temp file
-            import os
-            os.unlink(profile_path)
         except Exception as e:
             raise RuntimeError(f"Windows Wi-Fi connection failed: {e}")
+        finally:
+            if profile_path:
+                try:
+                    os.unlink(profile_path)
+                except OSError:
+                    logger.warning("Could not remove temporary Windows WLAN profile file.")
 
     def _connect_linux(self, ssid, psk):
-        """Connect to Wi-Fi on Linux using nmcli or wpa_cli."""
+        """Connect to Wi-Fi on Linux using NetworkManager."""
         try:
-            # Try nmcli first (NetworkManager)
+            command = ["nmcli", "dev", "wifi", "connect", ssid]
+            if psk:
+                command.extend(["password", psk])
+            if self.interface:
+                command.extend(["ifname", self.interface])
+
             result = subprocess.run(
-                ["nmcli", "dev", "wifi", "connect", ssid, "password", psk],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=15
@@ -210,8 +271,10 @@ class ConnectionManager:
             if result.returncode == 0:
                 return
             
-            # Fallback message if nmcli fails
-            raise RuntimeError("nmcli connection failed. Ensure NetworkManager is installed and running.")
+            error = result.stderr.strip() or result.stdout.strip()
+            raise RuntimeError(
+                f"nmcli connection failed: {error}. Ensure NetworkManager is installed and running."
+            )
         except FileNotFoundError:
             raise RuntimeError("nmcli not found. Please install NetworkManager (sudo apt install network-manager on Debian/Ubuntu)")
         except Exception as e:
@@ -230,7 +293,7 @@ class ConnectionManager:
                 elif self.system == 'Windows':
                     self._disconnect_windows(ssid)
                 else:  # Linux
-                    self._disconnect_linux()
+                    self._disconnect_linux(ssid)
                 
                 logger.info(f"Wi-Fi disconnected successfully from SSID={ssid} on interface={self.interface}.")
                 self.connected = False
@@ -262,17 +325,27 @@ class ConnectionManager:
             timeout=10
         )
 
-    def _disconnect_linux(self):
+    def _disconnect_linux(self, ssid):
         """Disconnect Wi-Fi on Linux."""
-        try:
-            subprocess.run(
-                ["nmcli", "con", "down", "id", self.interface],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-        except Exception:
-            logger.warning("Could not disconnect using nmcli")
+        commands = [
+            ["nmcli", "con", "down", "id", ssid],
+            ["nmcli", "dev", "disconnect", self.interface],
+        ]
+        for command in commands:
+            try:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    return
+            except FileNotFoundError:
+                logger.warning("nmcli not found while disconnecting.")
+                return
+            except Exception as e:
+                logger.warning(f"Could not disconnect using {' '.join(command)}: {e}")
 
     def verify_connection(self, max_attempts=10):
         logger.debug(f"Verifying Wi-Fi connection on {self.system} by pinging 192.168.4.1.")
