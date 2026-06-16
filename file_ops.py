@@ -25,6 +25,9 @@ def recursive_traversal(ezshare_instance, url, dir_path, total_files, processed_
     :return: Updated count of processed files.
     """
     files, dirs = list_dir(ezshare_instance, url)
+    if files is None and dirs is None:
+        ezshare_instance.update_status('Unable to retrieve directory listing. Connection issue suspected.', 'error')
+        return processed_files
     processed_files = check_files(ezshare_instance, files, url, dir_path, total_files, processed_files, is_running)
     processed_files = check_dirs(ezshare_instance, dirs, url, dir_path, total_files, processed_files, is_running)
     return processed_files
@@ -45,7 +48,7 @@ def list_dir(ezshare, url):
         return files, dirs
     except requests.RequestException as e:
         logger.error(f"Error fetching directory listing from {url}: {e}")
-        return [], []
+        return None, None
 
 def parse_directory_listing(ezshare, soup):
     """
@@ -153,6 +156,8 @@ def download_file(ezshare_instance, url, file_path, file_ts=None):
     max_retries = ezshare_instance.retries
     retries = max_retries
     while retries > 0:
+        tmp_file_path = None
+        cancelled = False
         try:
             response = ezshare_instance.session.get(url, stream=True, timeout=5)
             response.raise_for_status()
@@ -165,22 +170,29 @@ def download_file(ezshare_instance, url, file_path, file_ts=None):
                 return True
 
             with NamedTemporaryFile(delete=False, dir=file_path.parent) as tmp_file:
+                tmp_file_path = pathlib.Path(tmp_file.name)
                 for data in response.iter_content(1024):
                     if not ezshare_instance._is_running:
                         logger.info('Cancelling download of %s', str(file_path))
-                        tmp_file.close()
-                        pathlib.Path(tmp_file.name).unlink()
-                        return False
+                        cancelled = True
+                        break
                     tmp_file.write(data)
                 tmp_file.flush()
                 os.fsync(tmp_file.fileno())
-                tmp_file_path = pathlib.Path(tmp_file.name)
-                tmp_file_path.replace(file_path)
-                logger.info('%s written', str(file_path))
-                if file_ts:
-                    os.utime(file_path, (file_ts, file_ts))
+
+            if cancelled:
+                tmp_file_path.unlink(missing_ok=True)
+                return False
+
+            tmp_file_path.replace(file_path)
+            tmp_file_path = None
+            logger.info('%s written', str(file_path))
+            if file_ts:
+                os.utime(file_path, (file_ts, file_ts))
             return True  # Successful download
         except Exception as e:
+            if tmp_file_path:
+                tmp_file_path.unlink(missing_ok=True)
             retries -= 1
             logger.error(f'Error downloading file {file_path}: {e}. Retries left: {retries}')
             if retries == 0:

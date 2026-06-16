@@ -22,6 +22,7 @@ def initialize_button_states(app):
         'quit_checkbox': {'enabled': True, 'default': True, 'visible': True},
         'select_folder_button': {'enabled': True, 'default': True, 'visible': True},
         'configure_wifi_button': {'enabled': True, 'default': True, 'visible': True},
+        'download_oscar_link': {'enabled': True, 'default': True, 'visible': True},
         'local_directory_path': {'enabled': True, 'default': True, 'visible': True},
         'url_entry': {'enabled': True, 'default': True, 'visible': True},
         'ssid_entry': {'enabled': True, 'default': True, 'visible': True},

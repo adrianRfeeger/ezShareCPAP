@@ -84,7 +84,8 @@ class ezShare:
             retries = self.retries
             while retries > 0 and self._is_running:
                 try:
-                    self.connection_manager.connect(self.ssid, self.psk)
+                    target_host = urllib.parse.urlparse(self.url).hostname or "192.168.4.1"
+                    self.connection_manager.connect(self.ssid, self.psk, target_host=target_host)
                     if not self.connection_manager.connected or not self._is_running:
                         raise RuntimeError("Failed to connect to Wi-Fi or process was canceled.")
 
@@ -127,8 +128,13 @@ class ezShare:
             return False
 
     def calculate_total_files(self, url, dir_path, overwrite):
-        total_files = 0
         files, dirs = list_dir(self, url)
+        if files is None and dirs is None:
+            return None
+        return self.calculate_total_files_from_listing(files, dirs, url, dir_path, overwrite)
+
+    def calculate_total_files_from_listing(self, files, dirs, url, dir_path, overwrite):
+        total_files = 0
         for filename, file_url, file_ts in files:
             local_path = dir_path / filename
             if overwrite or not local_path.is_file() or local_path.stat().st_mtime < file_ts:
@@ -136,8 +142,29 @@ class ezShare:
         for dirname, dir_url in dirs:
             new_dir_path = dir_path / dirname
             absolute_dir_url = urllib.parse.urljoin(url, dir_url)
-            total_files += self.calculate_total_files(absolute_dir_url, new_dir_path, overwrite)
+            nested_total = self.calculate_total_files(absolute_dir_url, new_dir_path, overwrite)
+            if nested_total is None:
+                return None
+            total_files += nested_total
         return total_files
+
+    def wait_for_directory_listing(self):
+        attempts = max(1, self.retries or 1)
+        delay = max(1, self.connection_delay or 1)
+
+        for attempt in range(1, attempts + 1):
+            files, dirs = list_dir(self, self.url)
+            if files is not None or dirs is not None:
+                return files, dirs
+
+            if attempt < attempts and self._is_running:
+                self.update_status(
+                    f'Waiting for ez Share web server... attempt {attempt}/{attempts}',
+                    'info'
+                )
+                time.sleep(delay)
+
+        return None, None
 
     def run_after_connection_delay(self):
         if not self.connected or not self._is_running:
@@ -153,7 +180,7 @@ class ezShare:
         self.update_status('Scanning for files to download...')
 
         # Test directory listing to ensure we're truly connected
-        test_files, test_dirs = list_dir(self, self.url)
+        test_files, test_dirs = self.wait_for_directory_listing()
         if test_files is None and test_dirs is None:
             # If an error occurred, treat this as a connection problem
             self.update_status('Unable to retrieve directory listing. Connection issue suspected.', 'error')
@@ -163,7 +190,16 @@ class ezShare:
             # Log a warning and proceed cautiously - but this at least differentiates a verified empty result.
             self.update_status('Directory listing is empty. Possibly no files or still an issue.', 'info')
 
-        self.total_files = self.calculate_total_files(self.url, self.path, self.overwrite)
+        self.total_files = self.calculate_total_files_from_listing(
+            test_files,
+            test_dirs,
+            self.url,
+            self.path,
+            self.overwrite
+        )
+        if self.total_files is None:
+            self.update_status('Unable to count files because the ez Share directory could not be reached.', 'error')
+            return
         self.update_status(f'Total files to sync: {self.total_files}')
 
         if self.total_files == 0:

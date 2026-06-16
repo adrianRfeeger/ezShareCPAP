@@ -16,6 +16,8 @@ class ConnectionManager:
         self.interface = None
         self.connected = False
         self.system = platform.system()
+        self.windows_profile_name = None
+        self.windows_host_route = None
 
     def find_wifi_interface(self):
         logger.debug(f"Finding Wi-Fi interface on {self.system}.")
@@ -59,6 +61,9 @@ class ConnectionManager:
             result = subprocess.run(
                 [
                     "powershell",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
                     "-Command",
                     "Get-NetAdapter -Physical | "
                     "Where-Object {"
@@ -76,7 +81,12 @@ class ConnectionManager:
                 self.interface = result.stdout.strip()
                 logger.info(f"Wi-Fi interface found: {self.interface}")
                 return True
+            if result.stderr.strip():
+                logger.debug(f"PowerShell Wi-Fi interface lookup failed: {result.stderr.strip()}")
+        except Exception as e:
+            logger.debug(f"PowerShell Wi-Fi interface lookup failed: {e}")
 
+        try:
             result = subprocess.run(
                 ["netsh", "wlan", "show", "interfaces"],
                 capture_output=True,
@@ -89,12 +99,35 @@ class ConnectionManager:
                         self.interface = line.split(":", 1)[1].strip()
                         logger.info(f"Wi-Fi interface found: {self.interface}")
                         return True
-
-            logger.error("Wi-Fi interface not found on Windows.")
-            return False
+            else:
+                error = (result.stderr or result.stdout).strip()
+                if error:
+                    logger.debug(f"netsh wlan show interfaces failed: {error}")
         except Exception as e:
-            logger.exception(f"Error finding Windows Wi-Fi interface: {e}")
-            return False
+            logger.debug(f"netsh wlan show interfaces failed: {e}")
+
+        try:
+            result = subprocess.run(
+                ["netsh", "wlan", "show", "drivers"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    if line.strip().lower().startswith("interface name"):
+                        self.interface = line.split(":", 1)[1].strip()
+                        logger.info(f"Wi-Fi interface found: {self.interface}")
+                        return True
+            else:
+                error = (result.stderr or result.stdout).strip()
+                if error:
+                    logger.debug(f"netsh wlan show drivers failed: {error}")
+        except Exception as e:
+            logger.debug(f"netsh wlan show drivers failed: {e}")
+
+        logger.error("Wi-Fi interface not found on Windows.")
+        return False
 
     def _find_wifi_interface_linux(self):
         """Find Wi-Fi interface on Linux."""
@@ -147,7 +180,7 @@ class ConnectionManager:
             logger.exception(f"Error finding Linux Wi-Fi interface: {e}")
             return False
 
-    def connect(self, ssid, psk):
+    def connect(self, ssid, psk, target_host="192.168.4.1"):
         with self.connection_lock:
             logger.debug(f"Starting Wi-Fi connection process on {self.system}: SSID={ssid}")
             if not self.interface and not self.find_wifi_interface():
@@ -159,6 +192,7 @@ class ConnectionManager:
                     self._connect_macos(ssid, psk)
                 elif self.system == 'Windows':
                     self._connect_windows(ssid, psk)
+                    self._ensure_windows_host_route(target_host)
                 else:  # Linux
                     self._connect_linux(ssid, psk)
                 
@@ -179,6 +213,22 @@ class ConnectionManager:
 
     def _connect_windows(self, ssid, psk):
         """Connect to Wi-Fi on Windows."""
+        if self._windows_profile_exists(ssid):
+            result = subprocess.run(
+                ["netsh", "wlan", "connect", f"name={ssid}", f"ssid={ssid}", f"interface={self.interface}"],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if result.returncode == 0:
+                self.windows_profile_name = None
+                return
+            raise RuntimeError(
+                f"Failed to connect with existing Windows WLAN profile '{ssid}': {self._command_error(result)}"
+            )
+
+        profile_name = f"ezShareCPAP-{ssid}"
+        escaped_profile_name = escape(profile_name)
         escaped_ssid = escape(ssid)
         escaped_psk = escape(psk)
         ssid_hex = ssid.encode("utf-8").hex().upper()
@@ -203,7 +253,7 @@ class ConnectionManager:
         # Create a temporary WLAN XML profile compatible with netsh.
         profile_xml = f'''<?xml version="1.0"?>
 <WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
-    <name>{escaped_ssid}</name>
+    <name>{escaped_profile_name}</name>
     <SSIDConfig>
         <SSID>
             <hex>{ssid_hex}</hex>
@@ -220,6 +270,7 @@ class ConnectionManager:
 </WLANProfile>'''
         
         profile_path = None
+        profile_added = False
         try:
             with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False, encoding='utf-8') as f:
                 f.write(profile_xml)
@@ -227,24 +278,37 @@ class ConnectionManager:
             
             # Add WLAN profile
             result = subprocess.run(
-                ["netsh", "wlan", "add", "profile", f"filename={profile_path}", f"interface={self.interface}"],
+                [
+                    "netsh",
+                    "wlan",
+                    "add",
+                    "profile",
+                    f"filename={profile_path}",
+                    f"interface={self.interface}",
+                    "user=current",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=15
             )
             if result.returncode != 0:
-                raise RuntimeError(f"Failed to add profile: {result.stderr}")
+                raise RuntimeError(f"Failed to add profile: {self._command_error(result)}")
+            self.windows_profile_name = profile_name
+            profile_added = True
             
             # Connect to network
             result = subprocess.run(
-                ["netsh", "wlan", "connect", f"name={ssid}", f"ssid={ssid}", f"interface={self.interface}"],
+                ["netsh", "wlan", "connect", f"name={profile_name}", f"ssid={ssid}", f"interface={self.interface}"],
                 capture_output=True,
                 text=True,
                 timeout=15
             )
             if result.returncode != 0:
-                raise RuntimeError(f"Failed to connect: {result.stderr}")
+                raise RuntimeError(f"Failed to connect: {self._command_error(result)}")
         except Exception as e:
+            if profile_added:
+                self._delete_windows_profile(profile_name)
+                self.windows_profile_name = None
             raise RuntimeError(f"Windows Wi-Fi connection failed: {e}")
         finally:
             if profile_path:
@@ -252,6 +316,85 @@ class ConnectionManager:
                     os.unlink(profile_path)
                 except OSError:
                     logger.warning("Could not remove temporary Windows WLAN profile file.")
+
+    def _windows_profile_exists(self, profile_name):
+        result = subprocess.run(
+            ["netsh", "wlan", "show", "profiles"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            logger.debug(f"Could not list Windows WLAN profiles: {self._command_error(result)}")
+            return False
+
+        for line in result.stdout.splitlines():
+            if ":" in line and line.split(":", 1)[1].strip() == profile_name:
+                return True
+        return False
+
+    def _ensure_windows_host_route(self, target_host):
+        """Force ez Share card traffic over Wi-Fi when Ethernet has the preferred default route."""
+        if not target_host or not self.interface:
+            return
+
+        escaped_interface = self.interface.replace("'", "''")
+        escaped_target = target_host.replace("'", "''")
+        command = f"""
+$adapter = Get-NetAdapter -Name '{escaped_interface}' -ErrorAction Stop
+$ip = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction Stop |
+    Where-Object {{ $_.IPAddress -ne '169.254.0.0' }} |
+    Select-Object -First 1
+if (-not $ip) {{
+    throw 'No IPv4 address found on Wi-Fi adapter.'
+}}
+$destination = '{escaped_target}/32'
+$existing = Get-NetRoute -DestinationPrefix $destination -ErrorAction SilentlyContinue |
+    Where-Object {{ $_.InterfaceIndex -eq $adapter.ifIndex -and $_.NextHop -eq '0.0.0.0' }} |
+    Select-Object -First 1
+if (-not $existing) {{
+    New-NetRoute -DestinationPrefix $destination -InterfaceIndex $adapter.ifIndex -NextHop '0.0.0.0' -RouteMetric 1 -PolicyStore ActiveStore | Out-Null
+    'added'
+}} else {{
+    'exists'
+}}
+"""
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        if result.returncode != 0:
+            logger.warning(f"Could not add Windows Wi-Fi host route for {target_host}: {self._command_error(result)}")
+            return
+
+        self.windows_host_route = target_host if "added" in result.stdout else None
+        logger.info(f"Windows Wi-Fi host route for {target_host}: {result.stdout.strip()}")
+
+    def _remove_windows_host_route(self):
+        if not self.windows_host_route:
+            return
+
+        escaped_interface = self.interface.replace("'", "''")
+        escaped_target = self.windows_host_route.replace("'", "''")
+        command = f"""
+$adapter = Get-NetAdapter -Name '{escaped_interface}' -ErrorAction Stop
+$route = Get-NetRoute -DestinationPrefix '{escaped_target}/32' -ErrorAction SilentlyContinue |
+    Where-Object {{ $_.InterfaceIndex -eq $adapter.ifIndex -and $_.NextHop -eq '0.0.0.0' }}
+if ($route) {{
+    $route | Remove-NetRoute -Confirm:$false
+}}
+"""
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        if result.returncode != 0:
+            logger.warning(f"Could not remove Windows Wi-Fi host route for {self.windows_host_route}: {self._command_error(result)}")
+        self.windows_host_route = None
 
     def _connect_linux(self, ssid, psk):
         """Connect to Wi-Fi on Linux using NetworkManager."""
@@ -312,18 +455,29 @@ class ConnectionManager:
 
     def _disconnect_windows(self, ssid):
         """Disconnect Wi-Fi on Windows."""
+        self._remove_windows_host_route()
         subprocess.run(
             ["netsh", "wlan", "disconnect", f"interface={self.interface}"],
             capture_output=True,
             text=True,
             timeout=10
         )
+        profile_name = self.windows_profile_name or f"ezShareCPAP-{ssid}"
+        self._delete_windows_profile(profile_name)
+        self.windows_profile_name = None
+
+    def _delete_windows_profile(self, profile_name):
+        """Delete the temporary app-managed Windows WLAN profile."""
         subprocess.run(
-            ["netsh", "wlan", "delete", "profile", f"name={ssid}", f"interface={self.interface}"],
+            ["netsh", "wlan", "delete", "profile", f"name={profile_name}", f"interface={self.interface}"],
             capture_output=True,
             text=True,
             timeout=10
         )
+
+    @staticmethod
+    def _command_error(result):
+        return result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
 
     def _disconnect_linux(self, ssid):
         """Disconnect Wi-Fi on Linux."""
@@ -368,8 +522,12 @@ class ConnectionManager:
                     logger.warning(f"Ping failed (attempt {attempt_count + 1}/{max_attempts}): {result.stderr}")
                     attempt_count += 1
                     continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Ping timed out (attempt {attempt_count + 1}/{max_attempts}).")
+                attempt_count += 1
+                continue
             except Exception as e:
-                logger.exception(f"Exception during ping (attempt {attempt_count + 1}/{max_attempts}): {e}")
+                logger.warning(f"Ping failed with exception (attempt {attempt_count + 1}/{max_attempts}): {e}")
                 attempt_count += 1
                 continue
 
