@@ -31,24 +31,143 @@ class ConnectionManagerCommandTests(unittest.TestCase):
         with patch("wifi_utils.subprocess.run", side_effect=fake_run):
             manager._connect_windows("ez Share & Test", "pass<word>&")
 
-        self.assertEqual(commands[0][:4], ["netsh", "wlan", "add", "profile"])
-        self.assertIn("interface=Wi-Fi", commands[0])
+        self.assertEqual(commands[0], ["netsh", "wlan", "show", "profiles"])
+        self.assertEqual(commands[1][:4], ["netsh", "wlan", "add", "profile"])
+        self.assertIn("interface=Wi-Fi", commands[1])
+        self.assertIn("user=current", commands[1])
         self.assertEqual(
-            commands[1],
+            commands[2],
             [
                 "netsh",
                 "wlan",
                 "connect",
-                "name=ez Share & Test",
+                "name=ezShareCPAP-ez Share & Test",
                 "ssid=ez Share & Test",
                 "interface=Wi-Fi",
             ],
         )
         self.assertIn("<MSM>", profile_xml["content"])
         self.assertIn("<encryption>AES</encryption>", profile_xml["content"])
+        self.assertIn("<name>ezShareCPAP-ez Share &amp; Test</name>", profile_xml["content"])
         self.assertIn("<name>ez Share &amp; Test</name>", profile_xml["content"])
         self.assertIn("<keyMaterial>pass&lt;word&gt;&amp;</keyMaterial>", profile_xml["content"])
         self.assertFalse(profile_path["path"].exists())
+
+    def test_windows_connect_uses_existing_profile_when_available(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command == ["netsh", "wlan", "show", "profiles"]:
+                return completed(command, stdout="All User Profile     : ez Share\n")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run):
+            manager._connect_windows("ez Share", "88888888")
+
+        self.assertEqual(
+            commands,
+            [
+                ["netsh", "wlan", "show", "profiles"],
+                ["netsh", "wlan", "connect", "name=ez Share", "ssid=ez Share", "interface=Wi-Fi"],
+            ],
+        )
+        self.assertIsNone(manager.windows_profile_name)
+
+    def test_windows_connect_adds_host_route_for_target_host(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command == ["netsh", "wlan", "show", "profiles"]:
+                return completed(command, stdout="All User Profile     : ez Share\n")
+            if command[:4] == ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass"]:
+                return completed(command, stdout="added\n")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run):
+            manager.connect("ez Share", "88888888", target_host="192.168.4.1")
+
+        self.assertTrue(any("New-NetRoute" in command[-1] for command in commands if command[0] == "powershell"))
+        self.assertEqual(manager.windows_host_route, "192.168.4.1")
+
+    def test_windows_disconnect_removes_added_host_route(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        manager.windows_host_route = "192.168.4.1"
+        commands = []
+
+        with patch("wifi_utils.subprocess.run", side_effect=lambda command, **kwargs: commands.append(command) or completed(command)):
+            manager._disconnect_windows("ez Share")
+
+        self.assertTrue(any("Remove-NetRoute" in command[-1] for command in commands if command[0] == "powershell"))
+        self.assertIsNone(manager.windows_host_route)
+
+    def test_windows_existing_profile_failure_does_not_try_to_create_profile(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command == ["netsh", "wlan", "show", "profiles"]:
+                return completed(command, stdout="All User Profile     : ez Share\n")
+            return completed(command, returncode=1, stdout="network not available")
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(RuntimeError, "existing Windows WLAN profile"):
+                manager._connect_windows("ez Share", "88888888")
+
+        self.assertEqual(
+            commands,
+            [
+                ["netsh", "wlan", "show", "profiles"],
+                ["netsh", "wlan", "connect", "name=ez Share", "ssid=ez Share", "interface=Wi-Fi"],
+            ],
+        )
+
+    def test_windows_disconnect_removes_only_app_profile(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        manager.windows_profile_name = "ezShareCPAP-ez Share"
+        commands = []
+
+        with patch("wifi_utils.subprocess.run", side_effect=lambda command, **kwargs: commands.append(command) or completed(command)):
+            manager._disconnect_windows("ez Share")
+
+        self.assertEqual(
+            commands,
+            [
+                ["netsh", "wlan", "disconnect", "interface=Wi-Fi"],
+                ["netsh", "wlan", "delete", "profile", "name=ezShareCPAP-ez Share", "interface=Wi-Fi"],
+            ],
+        )
+        self.assertIsNone(manager.windows_profile_name)
+
+    def test_windows_connect_failure_removes_app_profile(self):
+        manager = ConnectionManager()
+        manager.interface = "Wi-Fi"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command[:4] == ["netsh", "wlan", "connect", "name=ezShareCPAP-ez Share"]:
+                return completed(command, returncode=1, stderr="network not available")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(RuntimeError, "Windows Wi-Fi connection failed"):
+                manager._connect_windows("ez Share", "88888888")
+
+        self.assertIn(
+            ["netsh", "wlan", "delete", "profile", "name=ezShareCPAP-ez Share", "interface=Wi-Fi"],
+            commands,
+        )
+        self.assertIsNone(manager.windows_profile_name)
 
     def test_linux_find_wifi_interface_prefers_networkmanager(self):
         manager = ConnectionManager()
@@ -80,6 +199,46 @@ There is 1 interface on the system:
     Description            : Wireless Adapter
 """,
                 ),
+            ],
+        ):
+            self.assertTrue(manager._find_wifi_interface_windows())
+
+        self.assertEqual(manager.interface, "Wi-Fi")
+
+    def test_windows_find_wifi_interface_falls_back_to_netsh_drivers(self):
+        manager = ConnectionManager()
+
+        with patch(
+            "wifi_utils.subprocess.run",
+            side_effect=[
+                completed(["powershell"], returncode=1, stderr="Access denied"),
+                completed(["netsh"], returncode=1, stdout="requires elevation"),
+                completed(
+                    ["netsh"],
+                    stdout="""
+Interface name: Wi-Fi
+
+    Driver                    : Realtek Wireless LAN 802.11ac PCI-E NIC
+    Type                      : Native Wi-Fi Driver
+""",
+                ),
+            ],
+        ) as run:
+            self.assertTrue(manager._find_wifi_interface_windows())
+
+        self.assertEqual(manager.interface, "Wi-Fi")
+        self.assertIn("-NoProfile", run.call_args_list[0].args[0])
+        self.assertIn("-ExecutionPolicy", run.call_args_list[0].args[0])
+
+    def test_windows_find_wifi_interface_continues_after_powershell_timeout(self):
+        manager = ConnectionManager()
+
+        with patch(
+            "wifi_utils.subprocess.run",
+            side_effect=[
+                subprocess.TimeoutExpired(["powershell"], timeout=5),
+                completed(["netsh"], returncode=1, stdout="requires elevation"),
+                completed(["netsh"], stdout="Interface name: Wi-Fi\n"),
             ],
         ):
             self.assertTrue(manager._find_wifi_interface_windows())
