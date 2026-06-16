@@ -275,7 +275,7 @@ class Callbacks:
             update_status(self.app, f"Error restoring default configuration: {str(e)}", 'error')
 
     def open_oscar_download_page(self, event=None):
-        if not get_button_state(self.app, 'open_oscar')['enabled']:
+        if not get_button_state(self.app, 'download_oscar_link')['enabled']:
             logging.warning("Open OSCAR download page aborted: Button is not enabled.")
             return
         logging.info("Opening OSCAR download page.")
@@ -443,8 +443,13 @@ class Callbacks:
                 state=tk.NORMAL if oscar_installed else tk.DISABLED
             )
             if oscar_installed:
+                self.app.button_states['download_oscar_link']['visible'] = False
+                self.app.button_states['download_oscar_link']['enabled'] = False
                 self.app.builder.get_object('download_oscar_link').pack_forget()
             else:
+                self.app.button_states['download_oscar_link']['visible'] = True
+                self.app.button_states['download_oscar_link']['enabled'] = True
+                self.app.builder.get_object('download_oscar_link').config(state=tk.NORMAL)
                 self.app.builder.get_object('download_oscar_link').pack(
                     fill='both', expand=True, padx=10, pady=5, side='top'
                 )
