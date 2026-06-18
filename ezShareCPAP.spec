@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 APP_NAME = 'ezShareCPAP'
+APP_VERSION = '0.3.0'
 BUNDLE_ID = 'com.ezsharecpap'
 IS_MACOS = sys.platform == 'darwin'
 IS_WINDOWS = sys.platform.startswith('win')
@@ -95,8 +96,8 @@ if IS_MACOS:
             'CFBundleDisplayName': APP_NAME,
             'CFBundleGetInfoString': APP_NAME,
             'CFBundleIdentifier': BUNDLE_ID,
-            'CFBundleVersion': '1.0.1',
-            'CFBundleShortVersionString': '1.0.1',
+            'CFBundleVersion': APP_VERSION,
+            'CFBundleShortVersionString': APP_VERSION,
             'NSAppTransportSecurity': {
                 'NSAllowsArbitraryLoads': True,
             },

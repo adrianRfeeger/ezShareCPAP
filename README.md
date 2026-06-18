@@ -88,7 +88,7 @@ The app attempts to detect your installed OSCAR version and displays it in the *
 1. **Download the Release Version:**
    - Download the latest Linux release archive from the [Releases Page](https://github.com/adrianRfeeger/ezShareCPAP).
 2. **Extract and Make Executable:**
-   - `tar -xzf ezShareCPAP*.tar.gz && cd ezShareCPAP && chmod +x ezShareCPAP && ./ezShareCPAP`
+   - `tar -xzf ezShareCPAP-Linux-x86_64.tar.gz && cd ezShareCPAP && ./ezShareCPAP`
 3. **Install NetworkManager (if needed):**
    - **Ubuntu/Debian:** `sudo apt install network-manager`
    - **Fedora:** `sudo dnf install NetworkManager`
@@ -168,6 +168,12 @@ PyInstaller does not cross-compile this application. Run the build on each targe
    - **macOS:** `dist/ezShareCPAP.app` (move to `/Applications`)
    - **Windows:** `dist/ezShareCPAP/ezShareCPAP.exe` for the GUI and `dist/ezShareCPAP/ezShareCPAP-cli.exe` for the CLI
    - **Linux:** `dist/ezShareCPAP/ezShareCPAP` for the GUI and `dist/ezShareCPAP/ezShareCPAP-cli` for the CLI
+
+   To package the Linux folder build as a release archive:
+
+   ```bash
+   tar -C dist -czf release/ezShareCPAP-Linux-x86_64.tar.gz ezShareCPAP
+   ```
 
 The spec uses `icon.icns` for macOS and `icon.ico` for Windows when those files are present.
 The entry point supports both GUI and CLI mode. Non-macOS PyInstaller builds include a dedicated console CLI launcher so command output and exit codes work cleanly from a terminal.
@@ -331,6 +337,7 @@ dist/ezShareCPAP.app/Contents/MacOS/ezShareCPAP sync --path ~/Documents/CPAP_Dat
 - `icon.png`: Icon image used in the application.
 - `folder.png`, `file.png`, `sdcard.png`: Icons used in the folder selector dialog.
 - `tests/test_platform_wifi.py`: Unit tests for platform-specific Wi-Fi command generation and config-page launching.
+- `tests/test_connect_sync.py`: Regression test for the connect, scan, download, progress, and disconnect sync flow.
 
 ## Troubleshooting
 
@@ -358,7 +365,7 @@ dist/ezShareCPAP.app/Contents/MacOS/ezShareCPAP sync --path ~/Documents/CPAP_Dat
 - **NetworkManager Installation:**
   - If Wi-Fi connection fails, install NetworkManager: `sudo apt install network-manager` (Ubuntu/Debian) or `sudo dnf install NetworkManager` (Fedora).
   - Ensure NetworkManager is running: `sudo systemctl start NetworkManager`.
-  - The app uses `nmcli` to connect and disconnect. It can detect interfaces with `nmcli`, `iwconfig`, or `ip`, but NetworkManager is still required for connection.
+  - The app uses `nmcli` to create a temporary app-managed Wi-Fi profile, connect, disconnect, and remove that profile. It can detect interfaces with `nmcli`, `iwconfig`, or `ip`, but NetworkManager is still required for connection.
   
 - **OSCAR Path:**
   - Ensure OSCAR is in your PATH. You can verify with: `which OSCAR`.
@@ -422,6 +429,13 @@ dist/ezShareCPAP.app/Contents/MacOS/ezShareCPAP sync --path ~/Documents/CPAP_Dat
 If you encounter issues not covered in this guide, please open an issue on the [GitHub repository](https://github.com/adrianRfeeger/ezShareCPAP/issues) with details of the problem.
 
 ## Changelog
+
+### Version 0.3.0 (Linux Wi-Fi Reliability)
+- **Fixed:** Linux NetworkManager connection now creates an explicit temporary WPA-PSK profile, avoiding `802-11-wireless-security.key-mgmt` errors from incomplete `nmcli` profile creation.
+- **Improved:** Linux disconnect cleans up the app-managed NetworkManager profile after sync or failed connection attempts.
+- **New:** Added regression coverage for the end-to-end connect, scan, download, progress, and disconnect sync flow.
+- **Updated:** Application and bundle metadata now report version 0.3.0 consistently.
+- Bumped version from 0.2.0 to 0.3.0 to reflect the Linux Wi-Fi reliability fix.
 
 ### Version 0.2.0 (Cross-Platform)
 - **New:** Full cross-platform support (macOS, Windows, Linux)

@@ -2,6 +2,8 @@
 import sys
 
 
+APP_VERSION = "0.3.0"
+
 ENTRYPOINT_HELP = (
     "Usage:\n"
     "  python main.py                 Launch the GUI\n"
@@ -112,7 +114,7 @@ class EzShareCPAPUI:
         
         about_message = (
             "ezShareCPAP\n"
-            "Version 0.2.0\n"
+            f"Version {APP_VERSION}\n"
             "Cross-Platform (macOS, Windows, Linux)\n"
             "Compatible with OSCAR 1.x and OSCAR 2.0.0+\n"
             "\n"
