@@ -18,6 +18,7 @@ class ConnectionManager:
         self.system = platform.system()
         self.windows_profile_name = None
         self.windows_host_route = None
+        self.linux_profile_name = None
 
     def find_wifi_interface(self):
         logger.debug(f"Finding Wi-Fi interface on {self.system}.")
@@ -398,29 +399,76 @@ if ($route) {{
 
     def _connect_linux(self, ssid, psk):
         """Connect to Wi-Fi on Linux using NetworkManager."""
+        profile_name = f"ezShareCPAP-{ssid}"
+        profile_added = False
         try:
-            command = ["nmcli", "dev", "wifi", "connect", ssid]
-            if psk:
-                command.extend(["password", psk])
-            if self.interface:
-                command.extend(["ifname", self.interface])
+            self._delete_linux_profile(profile_name)
 
+            add_command = [
+                "nmcli",
+                "con",
+                "add",
+                "type",
+                "wifi",
+                "ifname",
+                self.interface or "*",
+                "con-name",
+                profile_name,
+                "ssid",
+                ssid,
+            ]
             result = subprocess.run(
-                command,
+                add_command,
                 capture_output=True,
                 text=True,
                 timeout=15
             )
-            if result.returncode == 0:
-                return
-            
-            error = result.stderr.strip() or result.stdout.strip()
-            raise RuntimeError(
-                f"nmcli connection failed: {error}. Ensure NetworkManager is installed and running."
+            if result.returncode != 0:
+                raise RuntimeError(f"nmcli profile creation failed: {self._command_error(result)}")
+            profile_added = True
+
+            modify_command = [
+                "nmcli",
+                "con",
+                "modify",
+                profile_name,
+                "connection.autoconnect",
+                "no",
+                "ipv4.method",
+                "auto",
+                "ipv6.method",
+                "ignore",
+            ]
+            if psk:
+                modify_command.extend(["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", psk])
+
+            result = subprocess.run(
+                modify_command,
+                capture_output=True,
+                text=True,
+                timeout=15
             )
+            if result.returncode != 0:
+                raise RuntimeError(f"nmcli profile configuration failed: {self._command_error(result)}")
+
+            result = subprocess.run(
+                ["nmcli", "con", "up", profile_name],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"nmcli connection failed: {self._command_error(result)}. "
+                    "Ensure NetworkManager is installed and running."
+                )
+
+            self.linux_profile_name = profile_name
         except FileNotFoundError:
             raise RuntimeError("nmcli not found. Please install NetworkManager (sudo apt install network-manager on Debian/Ubuntu)")
         except Exception as e:
+            if profile_added:
+                self._delete_linux_profile(profile_name)
             raise RuntimeError(f"Linux Wi-Fi connection failed: {e}")
 
     def disconnect(self, ssid):
@@ -481,8 +529,10 @@ if ($route) {{
 
     def _disconnect_linux(self, ssid):
         """Disconnect Wi-Fi on Linux."""
+        profile_name = self.linux_profile_name or f"ezShareCPAP-{ssid}"
         commands = [
-            ["nmcli", "con", "down", "id", ssid],
+            ["nmcli", "con", "down", "id", profile_name],
+            ["nmcli", "con", "delete", "id", profile_name],
             ["nmcli", "dev", "disconnect", self.interface],
         ]
         for command in commands:
@@ -494,12 +544,27 @@ if ($route) {{
                     timeout=10
                 )
                 if result.returncode == 0:
-                    return
+                    if command[1:3] == ["con", "delete"]:
+                        self.linux_profile_name = None
+                        return
             except FileNotFoundError:
                 logger.warning("nmcli not found while disconnecting.")
                 return
             except Exception as e:
                 logger.warning(f"Could not disconnect using {' '.join(command)}: {e}")
+
+    def _delete_linux_profile(self, profile_name):
+        try:
+            subprocess.run(
+                ["nmcli", "con", "delete", "id", profile_name],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        except FileNotFoundError:
+            raise
+        except Exception as e:
+            logger.debug(f"Could not delete Linux Wi-Fi profile '{profile_name}': {e}")
 
     def verify_connection(self, max_attempts=10):
         logger.debug(f"Verifying Wi-Fi connection on {self.system} by pinging 192.168.4.1.")

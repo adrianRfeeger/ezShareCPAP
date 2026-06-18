@@ -79,6 +79,7 @@ class ConnectionManagerCommandTests(unittest.TestCase):
     def test_windows_connect_adds_host_route_for_target_host(self):
         manager = ConnectionManager()
         manager.interface = "Wi-Fi"
+        manager.system = "Windows"
         commands = []
 
         def fake_run(command, **kwargs):
@@ -258,38 +259,79 @@ Interface name: Wi-Fi
 
         self.assertEqual(manager.interface, "wlan1")
 
-    def test_linux_connect_uses_nmcli_with_interface(self):
+    def test_linux_connect_creates_explicit_wpa_profile_with_interface(self):
         manager = ConnectionManager()
         manager.interface = "wlan0"
+        commands = []
 
-        with patch("wifi_utils.subprocess.run", return_value=completed(["nmcli"])) as run:
+        with patch("wifi_utils.subprocess.run", side_effect=lambda command, **kwargs: commands.append(command) or completed(command)):
             manager._connect_linux("ez Share", "88888888")
 
-        run.assert_called_once_with(
+        self.assertEqual(
+            commands,
             [
-                "nmcli",
-                "dev",
-                "wifi",
-                "connect",
-                "ez Share",
-                "password",
-                "88888888",
-                "ifname",
-                "wlan0",
+                ["nmcli", "con", "delete", "id", "ezShareCPAP-ez Share"],
+                [
+                    "nmcli",
+                    "con",
+                    "add",
+                    "type",
+                    "wifi",
+                    "ifname",
+                    "wlan0",
+                    "con-name",
+                    "ezShareCPAP-ez Share",
+                    "ssid",
+                    "ez Share",
+                ],
+                [
+                    "nmcli",
+                    "con",
+                    "modify",
+                    "ezShareCPAP-ez Share",
+                    "connection.autoconnect",
+                    "no",
+                    "ipv4.method",
+                    "auto",
+                    "ipv6.method",
+                    "ignore",
+                    "wifi-sec.key-mgmt",
+                    "wpa-psk",
+                    "wifi-sec.psk",
+                    "88888888",
+                ],
+                ["nmcli", "con", "up", "ezShareCPAP-ez Share"],
             ],
-            capture_output=True,
-            text=True,
-            timeout=15,
         )
+        self.assertEqual(manager.linux_profile_name, "ezShareCPAP-ez Share")
 
-    def test_linux_disconnect_falls_back_to_device_disconnect(self):
+    def test_linux_connect_removes_app_profile_on_failure(self):
         manager = ConnectionManager()
         manager.interface = "wlan0"
         commands = []
 
         def fake_run(command, **kwargs):
             commands.append(command)
-            return completed(command, returncode=1 if len(commands) == 1 else 0)
+            if command == ["nmcli", "con", "up", "ezShareCPAP-ez Share"]:
+                return completed(command, returncode=1, stderr="key-mgmt missing")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(RuntimeError, "key-mgmt missing"):
+                manager._connect_linux("ez Share", "88888888")
+
+        self.assertEqual(commands[-1], ["nmcli", "con", "delete", "id", "ezShareCPAP-ez Share"])
+        self.assertIsNone(manager.linux_profile_name)
+
+    def test_linux_disconnect_falls_back_to_device_disconnect(self):
+        manager = ConnectionManager()
+        manager.interface = "wlan0"
+        manager.linux_profile_name = "ezShareCPAP-ez Share"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            return completed(command, returncode=1 if len(commands) < 3 else 0)
 
         with patch("wifi_utils.subprocess.run", side_effect=fake_run):
             manager._disconnect_linux("ez Share")
@@ -297,7 +339,8 @@ Interface name: Wi-Fi
         self.assertEqual(
             commands,
             [
-                ["nmcli", "con", "down", "id", "ez Share"],
+                ["nmcli", "con", "down", "id", "ezShareCPAP-ez Share"],
+                ["nmcli", "con", "delete", "id", "ezShareCPAP-ez Share"],
                 ["nmcli", "dev", "disconnect", "wlan0"],
             ],
         )
