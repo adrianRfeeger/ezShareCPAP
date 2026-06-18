@@ -13,6 +13,66 @@ def completed(command, returncode=0, stdout="", stderr=""):
 
 
 class ConnectionManagerCommandTests(unittest.TestCase):
+    def test_macos_disconnect_forgets_network_power_cycles_and_verifies_ssid(self):
+        manager = ConnectionManager()
+        manager.interface = "en0"
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command == ["networksetup", "-getairportnetwork", "en0"]:
+                return completed(command, stdout="You are not associated with an AirPort network.\n")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run), patch("wifi_utils.time.sleep"):
+            manager._disconnect_macos("ez Share")
+
+        self.assertEqual(
+            commands,
+            [
+                ["networksetup", "-removepreferredwirelessnetwork", "en0", "ez Share"],
+                ["networksetup", "-setairportpower", "en0", "off"],
+                ["networksetup", "-setairportpower", "en0", "on"],
+                ["networksetup", "-getairportnetwork", "en0"],
+            ],
+        )
+
+    def test_macos_disconnect_fails_when_wifi_rejoins_target_ssid(self):
+        manager = ConnectionManager()
+        manager.interface = "en0"
+
+        def fake_run(command, **kwargs):
+            if command == ["networksetup", "-getairportnetwork", "en0"]:
+                return completed(command, stdout="Current Wi-Fi Network: ez Share\n")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run), patch("wifi_utils.time.sleep"):
+            with self.assertRaisesRegex(RuntimeError, "still connected to SSID 'ez Share'"):
+                manager._disconnect_macos("ez Share")
+
+    def test_macos_disconnect_treats_authorization_error_as_failure(self):
+        manager = ConnectionManager()
+        manager.interface = "en0"
+
+        def fake_run(command, **kwargs):
+            if command == ["networksetup", "-setairportpower", "en0", "off"]:
+                return completed(command, stdout="AuthorizationCreate() failed: -60008\n")
+            return completed(command)
+
+        with patch("wifi_utils.subprocess.run", side_effect=fake_run), patch("wifi_utils.time.sleep"):
+            with self.assertRaisesRegex(RuntimeError, "power-off failed"):
+                manager._disconnect_macos("ez Share")
+
+    def test_macos_current_ssid_parses_legacy_airport_label(self):
+        manager = ConnectionManager()
+        manager.interface = "en0"
+
+        with patch(
+            "wifi_utils.subprocess.run",
+            return_value=completed(["networksetup"], stdout="Current AirPort Network: ez Share\n"),
+        ):
+            self.assertEqual(manager._macos_current_ssid(), "ez Share")
+
     def test_windows_connect_uses_valid_wlan_profile_and_interface(self):
         manager = ConnectionManager()
         manager.interface = "Wi-Fi"

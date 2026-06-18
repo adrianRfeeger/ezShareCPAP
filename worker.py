@@ -46,7 +46,9 @@ class EzShareWorker(threading.Thread):
     def _cleanup(self, success=False):
         logging.info(f"Cleaning up {self.name}.")
         if self.ezshare.connected:
-            self.ezshare.connection_manager.disconnect(self.ezshare.ssid)
-            self.ezshare.connected = False
+            if self.ezshare.connection_manager.disconnect(self.ezshare.ssid):
+                self.ezshare.connected = False
+            else:
+                self.update_status('Could not disconnect from Wi-Fi automatically.', 'error')
         self.queue.put(('finished', success))
         logging.info(f"{self.name} cleanup completed.")

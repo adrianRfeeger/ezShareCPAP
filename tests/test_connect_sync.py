@@ -22,6 +22,7 @@ class FakeConnectionManager:
     def disconnect(self, ssid):
         self.disconnect_calls.append(ssid)
         self.connected = False
+        return True
 
 
 class FakeResponse:

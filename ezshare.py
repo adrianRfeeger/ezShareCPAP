@@ -118,9 +118,11 @@ class ezShare:
 
             # Disconnect after finishing
             if self.connected:
-                self.connection_manager.disconnect(self.ssid)
-                self.update_status('Disconnected from Wi-Fi.')
-                self.connected = False
+                if self.connection_manager.disconnect(self.ssid):
+                    self.update_status('Disconnected from Wi-Fi.')
+                    self.connected = False
+                else:
+                    self.update_status('Could not disconnect from Wi-Fi automatically.', 'error')
             return success
 
         else:
@@ -222,5 +224,7 @@ class ezShare:
         self._is_running = False
         self.update_status('Process stopped by user.', 'info')
         if self.connected:
-            self.connection_manager.disconnect(self.ssid)
-            self.connected = False
+            if self.connection_manager.disconnect(self.ssid):
+                self.connected = False
+            else:
+                self.update_status('Could not disconnect from Wi-Fi automatically.', 'error')

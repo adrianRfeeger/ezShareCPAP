@@ -480,7 +480,7 @@ if ($route) {{
 
             try:
                 if self.system == 'Darwin':  # macOS
-                    self._disconnect_macos()
+                    self._disconnect_macos(ssid)
                 elif self.system == 'Windows':
                     self._disconnect_windows(ssid)
                 else:  # Linux
@@ -493,13 +493,57 @@ if ($route) {{
                 logger.exception(f"Exception during Wi-Fi disconnection: {e}")
                 return False
 
-    def _disconnect_macos(self):
+    def _disconnect_macos(self, ssid):
         """Disconnect Wi-Fi on macOS."""
+        if ssid:
+            self._remove_macos_preferred_network(ssid)
+
         disconnect_command = ["networksetup", "-setairportpower", self.interface, "off"]
-        subprocess.run(disconnect_command, capture_output=True, text=True, timeout=10)
-        
+        result = subprocess.run(disconnect_command, capture_output=True, text=True, timeout=10)
+        if self._networksetup_failed(result):
+            raise RuntimeError(f"macOS Wi-Fi power-off failed: {self._command_error(result)}")
+
+        time.sleep(1)
+
         turn_on_command = ["networksetup", "-setairportpower", self.interface, "on"]
-        subprocess.run(turn_on_command, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(turn_on_command, capture_output=True, text=True, timeout=10)
+        if self._networksetup_failed(result):
+            raise RuntimeError(f"macOS Wi-Fi power-on failed: {self._command_error(result)}")
+
+        time.sleep(2)
+
+        if ssid and self._macos_current_ssid() == ssid:
+            raise RuntimeError(f"macOS Wi-Fi is still connected to SSID '{ssid}' after disconnect.")
+
+    def _remove_macos_preferred_network(self, ssid):
+        """Remove the app target network so macOS does not auto-rejoin it."""
+        result = subprocess.run(
+            ["networksetup", "-removepreferredwirelessnetwork", self.interface, ssid],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if self._networksetup_failed(result):
+            logger.warning(
+                f"Could not remove macOS preferred Wi-Fi network '{ssid}': {self._command_error(result)}"
+            )
+
+    def _macos_current_ssid(self):
+        result = subprocess.run(
+            ["networksetup", "-getairportnetwork", self.interface],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if self._networksetup_failed(result):
+            logger.warning(f"Could not verify current macOS Wi-Fi network: {self._command_error(result)}")
+            return None
+
+        output = result.stdout.strip()
+        for prefix in ("Current Wi-Fi Network:", "Current AirPort Network:"):
+            if output.startswith(prefix):
+                return output[len(prefix):].strip()
+        return None
 
     def _disconnect_windows(self, ssid):
         """Disconnect Wi-Fi on Windows."""
@@ -526,6 +570,11 @@ if ($route) {{
     @staticmethod
     def _command_error(result):
         return result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+
+    @staticmethod
+    def _networksetup_failed(result):
+        output = f"{result.stdout}\n{result.stderr}"
+        return result.returncode != 0 or "AuthorizationCreate() failed" in output
 
     def _disconnect_linux(self, ssid):
         """Disconnect Wi-Fi on Linux."""
